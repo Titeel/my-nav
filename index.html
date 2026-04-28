@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 功能完整</title>
+    <title>聚合导航 - 完整功能修复版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
@@ -57,6 +57,10 @@
         .btn-del-init { background: #f5f5f5; color: #999; }
         .confirm-zone { display: none; gap: 8px; }
         .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
+
+        /* 密码弹窗样式 */
+        #pwd-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        #pwd-box { background: #fff; padding: 30px; border-radius: 16px; width: 300px; text-align: center; }
     </style>
 </head>
 <body>
@@ -66,7 +70,8 @@
     </div>
 
     <div id="side-admin-panel">
-        <h2 style="margin-top:0">管理中心</h2>
+        <h2 style="margin-top:0; cursor: pointer;" onclick="checkPwdStatus()">管理中心</h2>
+        <p id="lock-hint" style="font-size: 12px; color: #999; margin-top: -10px;">点击标题验证特权</p>
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
         <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
         <input type="text" id="newName" class="input-style" placeholder="输入名称">
@@ -77,6 +82,17 @@
         <div id="main-feedback" class="feedback-text"></div>
     </div>
 
+    <div id="pwd-overlay">
+        <div id="pwd-box">
+            <h3>管理员验证</h3>
+            <input type="password" id="adminPwd" class="input-style" placeholder="请输入密码" autofocus>
+            <div style="display:flex; gap:10px">
+                <button class="btn-action" style="background:var(--primary-color); color:white" onclick="doVerify()">确认</button>
+                <button class="btn-action" style="background:#eee" onclick="closePwd()">取消</button>
+            </div>
+        </div>
+    </div>
+
     <div id="float-tools">
         <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 进入管理中心</button>
     </div>
@@ -84,6 +100,7 @@
 <script>
     let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
     let isAdminMode = false;
+    let isUnlocked = false; // 记录是否已经解锁特权
 
     // 核心修复：处理 URL 防止 Github 前缀错误
     function formatUrl(url) {
@@ -105,19 +122,19 @@
     function render() {
         const grid = document.getElementById('main-grid');
         grid.innerHTML = bloggers.map((b, i) => `
-            <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
+            <div class="blogger-card ${isAdminMode && isUnlocked ? 'edit-mode-active' : ''}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value; saveToLocal()">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!(isAdminMode && isUnlocked) ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value; saveToLocal()">
                 </div>
                 <div class="link-group" id="link-group-${i}">
                     ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
                 </div>
-                ${isAdminMode ? `
+                ${isAdminMode && isUnlocked ? `
                 <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
                 <div class="action-btns">
                     <div id="normalBtns-${i}" style="display:flex; gap:8px">
                         <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
-                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${i})">保存当前卡片</button>
+                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${index=i})">保存当前卡片</button>
                     </div>
                     <div id="confirmZone-${i}" class="confirm-zone">
                         <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
@@ -129,7 +146,7 @@
     }
 
     function renderItem(link, cardIdx, linkIdx) {
-        if (!isAdminMode) {
+        if (!(isAdminMode && isUnlocked)) {
             return `
             <a href="${formatUrl(link.url)}" target="_blank" class="link-item-vertical">
                 <span class="link-label-text">${link.label}</span>
@@ -142,6 +159,32 @@
             <input type="text" class="tag-name-input" value="${link.label}" placeholder="链接标题">
             <input type="text" class="url-input" value="${link.url}" placeholder="网址">
         </div>`;
+    }
+
+    // 密码验证逻辑相关
+    function checkPwdStatus() {
+        if (isUnlocked) {
+            flashFeedback('main-feedback', '✨ 您已处于特权管理模式');
+            return;
+        }
+        document.getElementById('pwd-overlay').style.display = 'flex';
+        document.getElementById('adminPwd').focus();
+    }
+
+    function doVerify() {
+        if (document.getElementById('adminPwd').value === "K888") { // 设定密码为 K888
+            isUnlocked = true;
+            document.getElementById('lock-hint').innerText = "✅ 权限已解锁";
+            closePwd();
+            render();
+        } else {
+            alert("密码错误");
+        }
+    }
+
+    function closePwd() {
+        document.getElementById('pwd-overlay').style.display = 'none';
+        document.getElementById('adminPwd').value = '';
     }
 
     function addNewLinkLine(cardIdx) {
@@ -159,6 +202,10 @@
     function toggleAdmin(show) {
         isAdminMode = show;
         document.body.classList.toggle('admin-open', show);
+        // 如果开启管理面板但没解锁，自动提示密码
+        if (show && !isUnlocked) {
+            checkPwdStatus();
+        }
         render();
     }
 
