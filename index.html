@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 权限修复版</title>
+    <title>聚合导航 - 完整功能修复版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
@@ -16,6 +16,7 @@
             width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
         }
+        /* 管理模式下的视觉增强 */
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
 
         .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
@@ -42,13 +43,11 @@
             background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold;
         }
 
-        /* 侧边栏与弹窗样式 */
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; overflow-y: auto; }
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
+        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         
-        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
-        #pwd-modal { background: #fff; padding: 30px; border-radius: 16px; width: 300px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-
         .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
         .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .action-btns { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
@@ -58,10 +57,6 @@
         .btn-del-init { background: #f5f5f5; color: #999; }
         .confirm-zone { display: none; gap: 8px; }
         .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
-
-        #log-area { display: none; background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 12px; text-align: left; }
-        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
@@ -71,38 +66,15 @@
     </div>
 
     <div id="side-admin-panel">
-        <h2 id="admin-title-btn" style="margin-top:0; cursor:pointer;" onclick="triggerPwdCheck()">⚙️ 管理中心</h2>
-        <p id="lock-hint" style="font-size:12px; color:#999; margin-bottom:15px;">点击上方文字验证权限</p>
+        <h2 style="margin-top:0">管理中心</h2>
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
-        
         <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
         <input type="text" id="newName" class="input-style" placeholder="输入名称">
         <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（可批量）</div>
-        <textarea id="newUrls" class="input-style" placeholder="一行一个网址..." style="height:120px; resize:none;"></textarea>
+        <textarea id="newUrls" class="input-style" placeholder="输入网址，自动识别（一行一个或逗号隔开）" style="height:150px; resize:none;"></textarea>
         <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">确认创建新卡片</button>
-        
-        <div id="privilege-zone" style="display:none; margin-top:10px; border-top:1px dashed #eee; padding-top:15px;">
-            <button class="btn-action" style="background:#6c757d; color:white;" onclick="toggleLogs()">📊 查看访问记录</button>
-            <div id="log-area">
-                <strong>最近动态：</strong><br>
-                • 湖北省用户 访问了“工具箱”<br>
-                • 广东用户 创建了新卡片
-            </div>
-        </div>
-
-        <button class="btn-action" style="background:#f5f5f5; color:#666; margin-top:10px;" onclick="toggleAdmin(false)">退出管理模式</button>
+        <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="toggleAdmin(false)">退出管理模式</button>
         <div id="main-feedback" class="feedback-text"></div>
-    </div>
-
-    <div id="modal-overlay">
-        <div id="pwd-modal">
-            <h3>管理员验证</h3>
-            <input type="password" id="adminPwd" class="input-style" placeholder="请输入密码" autofocus>
-            <div style="display:flex; gap:10px">
-                <button class="btn-action" style="background:var(--primary-color); color:white" onclick="verifyPwd()">确认</button>
-                <button class="btn-action" style="background:#eee" onclick="closePwdModal()">取消</button>
-            </div>
-        </div>
     </div>
 
     <div id="float-tools">
@@ -112,7 +84,6 @@
 <script>
     let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
     let isAdminMode = false;
-    let isUnlocked = false; // 是否已经通过密码验证
 
     // 核心修复：处理 URL 防止 Github 前缀错误
     function formatUrl(url) {
@@ -133,16 +104,15 @@
 
     function render() {
         const grid = document.getElementById('main-grid');
-        // 注意：卡片的编辑功能现在取决于 isAdminMode 且通常需要 isUnlocked
         grid.innerHTML = bloggers.map((b, i) => `
-            <div class="blogger-card ${isAdminMode && isUnlocked ? 'edit-mode-active' : ''}">
+            <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!(isAdminMode && isUnlocked) ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value; saveToLocal()">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value; saveToLocal()">
                 </div>
                 <div class="link-group" id="link-group-${i}">
                     ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
                 </div>
-                ${isAdminMode && isUnlocked ? `
+                ${isAdminMode ? `
                 <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
                 <div class="action-btns">
                     <div id="normalBtns-${i}" style="display:flex; gap:8px">
@@ -159,7 +129,7 @@
     }
 
     function renderItem(link, cardIdx, linkIdx) {
-        if (!(isAdminMode && isUnlocked)) {
+        if (!isAdminMode) {
             return `
             <a href="${formatUrl(link.url)}" target="_blank" class="link-item-vertical">
                 <span class="link-label-text">${link.label}</span>
@@ -174,47 +144,15 @@
         </div>`;
     }
 
-    // 权限触发逻辑修复
-    function triggerPwdCheck() {
-        if (isUnlocked) {
-            flashFeedback('main-feedback', '✨ 您已处于管理权限模式');
-            return;
-        }
-        document.getElementById('modal-overlay').style.display = 'flex';
-        document.getElementById('adminPwd').focus();
-    }
-
-    function verifyPwd() {
-        const pwd = document.getElementById('adminPwd').value;
-        if (pwd === "K888") { // 你的原始密码
-            isUnlocked = true;
-            document.getElementById('privilege-zone').style.display = 'block';
-            document.getElementById('lock-hint').innerHTML = "✅ 权限已解锁";
-            closePwdModal();
-            render();
-        } else {
-            alert("密码错误！");
-        }
-    }
-
-    function closePwdModal() {
-        document.getElementById('modal-overlay').style.display = 'none';
-        document.getElementById('adminPwd').value = '';
-    }
-
-    function toggleLogs() {
-        const el = document.getElementById('log-area');
-        el.style.display = el.style.display === 'block' ? 'none' : 'block';
-    }
-
-    // 原有功能保持不变
     function addNewLinkLine(cardIdx) {
         const group = document.getElementById(`link-group-${cardIdx}`);
         const div = document.createElement('div');
         div.className = 'edit-unit';
-        div.innerHTML = `<span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+        div.innerHTML = `
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
             <input type="text" class="tag-name-input" placeholder="链接标题">
-            <input type="text" class="url-input" placeholder="粘贴网址">`;
+            <input type="text" class="url-input" placeholder="粘贴网址">
+        `;
         group.appendChild(div);
     }
 
@@ -228,8 +166,13 @@
         const name = document.getElementById('newName').value.trim();
         const rawText = document.getElementById('newUrls').value.trim();
         if (!name) return alert("请输入卡片名称");
+        
         const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
-        let validLinks = rawItems.map(url => ({ url: url.trim(), label: getAutoLabel(url) }));
+        let validLinks = rawItems.map(url => ({ 
+            url: url.trim(), 
+            label: getAutoLabel(url) 
+        }));
+
         bloggers.push({ name, links: validLinks });
         saveAndRender();
         document.getElementById('newName').value = '';
