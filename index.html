@@ -58,4 +58,111 @@
             <div style="font-size:13px; color:#666; margin-bottom:8px;">创建卡片名称</div>
             <input type="text" id="newName" class="input-style" placeholder="输入名称">
             <div style="font-size:13px; color:#666; margin-bottom:8px;">粘贴网址（自动识别）</div>
-            <textarea id="newUrls" class="input-style"
+            <textarea id="newUrls" class="input-style" placeholder="一行一个网址..." style="height:120px; resize:none;"></textarea>
+            <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">确认创建公开卡片</button>
+        </div>
+
+        <div id="privilege-box" class="privilege-only">
+            <button class="btn-action" style="background:#6c757d; color:white;" onclick="alert('正在调取访问记录...')">📊 查看访问记录</button>
+            <button class="btn-action" style="background:#f39c12; color:white;" onclick="changePwd()">🔑 修改管理员密码</button>
+            <button class="btn-action" style="background:#eee; color:#333;" onclick="location.reload()">锁定并退出</button>
+        </div>
+    </div>
+
+    <div id="float-tools">
+        <button class="btn-trigger" onclick="toggleSide(true)">⚙️ 管理控制面板</button>
+    </div>
+
+<script>
+    let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
+    let isPrivileged = false; // 是否解锁特权
+
+    function render() {
+        const grid = document.getElementById('main-grid');
+        // 只有解锁了特权，卡片才会显示编辑按钮和确认删除等功能
+        grid.innerHTML = bloggers.map((b, i) => `
+            <div class="blogger-card ${isPrivileged ? 'edit-mode-active' : ''}">
+                <div class="name-row">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isPrivileged ? 'readonly' : ''}>
+                </div>
+                <div class="link-group" id="link-group-${i}">
+                    ${b.links.map((link, j) => renderItem(link, i, j, isPrivileged)).join('')}
+                </div>
+                ${isPrivileged ? `
+                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
+                <div class="action-btns">
+                    <div id="normalBtns-${i}" style="display:flex; gap:8px">
+                        <button class="btn-base" style="background:#f5f5f5;color:#999" onclick="showConfirm(${i}, true)">删除卡片</button>
+                        <button class="btn-base" style="background:var(--success-color);color:white" onclick="saveChanges(${i})">保存修改</button>
+                    </div>
+                    <div id="confirmZone-${i}" style="display:none; gap:8px;">
+                        <button class="btn-base" style="flex:1; background:#666; color:white" onclick="showConfirm(${i}, false)">取消</button>
+                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除</button>
+                    </div>
+                </div>` : ''}
+            </div>`).join('');
+    }
+
+    function renderItem(link, cardIdx, linkIdx, editMode) {
+        if (!editMode) {
+            return `<a href="${link.url}" target="_blank" class="link-item-vertical">
+                <span class="link-label-text">${link.label}</span>
+                <span class="link-url-text">${link.url}</span>
+            </a>`;
+        }
+        return `<div class="edit-unit">
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" value="${link.label}">
+            <input type="text" class="url-input" value="${link.url}">
+        </div>`;
+    }
+
+    // 核心交互：验证特权
+    function verifyPrivilege() {
+        const p = prompt("请输入管理员特权密码：");
+        if (p === "K888") {
+            isPrivileged = true;
+            document.getElementById('privilege-box').style.display = 'block';
+            document.getElementById('lock-status').innerHTML = "<span style='color:green'>✅ 特权已解锁 (可编辑/删改/查记录)</span>";
+            render();
+        } else { alert("密码错误"); }
+    }
+
+    function toggleSide(show) { document.body.classList.toggle('admin-open', show); }
+
+    function addBlogger() {
+        const name = document.getElementById('newName').value.trim();
+        const rawText = document.getElementById('newUrls').value.trim();
+        if (!name) return alert("请输入卡片名称");
+        const urls = rawText.split('\n').filter(u => u.trim()).map(u => ({ url: u.trim(), label: "新链接" }));
+        bloggers.push({ name, links: urls });
+        save();
+    }
+
+    function saveChanges(index) {
+        const card = document.querySelectorAll('.blogger-card')[index];
+        const name = card.querySelector('.blogger-name-input').value;
+        const units = card.querySelectorAll('.edit-unit');
+        let links = [];
+        units.forEach(u => links.push({ label: u.querySelector('.tag-name-input').value, url: u.querySelector('.url-input').value }));
+        bloggers[index] = { name, links };
+        save();
+    }
+
+    function removeBlogger(i) { bloggers.splice(i, 1); save(); }
+    function save() { localStorage.setItem('verticalBloggers', JSON.stringify(bloggers)); render(); }
+    function showConfirm(i, is) {
+        document.getElementById(`normalBtns-${i}`).style.display = is ? 'none' : 'flex';
+        document.getElementById(`confirmZone-${i}`).style.display = is ? 'flex' : 'none';
+    }
+    function addNewLinkLine(i) {
+        const div = document.createElement('div'); div.className = 'edit-unit';
+        div.innerHTML = `<span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" placeholder="标题"><input type="text" class="url-input" placeholder="网址">`;
+        document.getElementById(`link-group-${i}`).appendChild(div);
+    }
+
+    window.onload = render;
+</script>
+</body>
+</html>
