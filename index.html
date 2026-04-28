@@ -2,46 +2,64 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 严格隔离版</title>
+    <title>聚合导航 - 日志增强版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; }
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
         
-        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; }
+        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
         body.admin-open #content-wrapper { margin-right: 340px; }
+
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
         
-        .blogger-card { width: 340px; background: #fff; border-radius: 16px; border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .blogger-card { 
+            width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
+        }
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
-        .name-row { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; width: 100%; }
+
+        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 100%; }
         
         .link-group { display: flex; flex-direction: column; gap: 10px; }
-        .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; transition: 0.2s; }
-        .link-item-vertical:hover { border-color: var(--primary-color); }
-        .link-label-text { font-size: 13px; font-weight: bold; color: #333; }
-        .link-url-text { font-size: 11px; color: #999; }
-        
-        /* 隐藏标记 */
-        .admin-tag-badge { font-size: 10px; background: #fff1f0; color: #ff4d4f; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffa39e; margin-left: 5px; }
+        .link-item-vertical {
+            display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none;
+        }
+        .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
+        .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 编辑控件 */
-        .edit-unit { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-        .tag-name-input { border: none; font-weight: bold; width: 80%; outline: none; font-size: 13px; border-bottom: 1px dashed #eee; }
-        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; margin-top: 5px; }
-        .privilege-label { font-size: 11px; color: #666; margin-top: 8px; display: flex; align-items: center; cursor: pointer; }
-
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; overflow-y: auto; }
-        body.admin-open #side-admin-panel { right: 0; }
-        .btn-trigger { position: fixed; bottom: 30px; right: 30px; background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; z-index: 999; }
+        .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
+        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; background:transparent; }
+        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; background:transparent; }
         
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .remove-link-btn { position: absolute; top: 8px; right: 8px; color: #ccc; cursor: pointer; font-size: 16px; line-height: 1; }
+        .remove-link-btn:hover { color: var(--danger-color); }
+
+        .add-item-btn { 
+            width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); 
+            background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold;
+        }
+
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; display: flex; flex-direction: column; }
+        body.admin-open #side-admin-panel { right: 0; visibility: visible; }
+        
+        #log-container { margin-top: 20px; flex: 1; overflow-y: auto; border-top: 1px solid #eee; padding-top: 15px; }
+        .log-item { font-size: 11px; color: #666; margin-bottom: 6px; padding: 4px; background: #f9f9f9; border-radius: 4px; }
+        .log-tag { font-weight: bold; color: var(--primary-color); margin-right: 4px; }
+
+        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        
+        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
         .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        
-        #pwd-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
-        #pwd-box { background: #fff; padding: 30px; border-radius: 16px; width: 300px; text-align: center; }
-
-        #log-area { display: none; margin-top: 15px; background: #f5f5f5; padding: 10px; border-radius: 8px; font-size: 11px; max-height: 150px; overflow-y: auto; text-align: left; border: 1px solid #eee; }
+        .action-btns { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
+        .btn-base { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .btn-save { background: var(--success-color); color: white; }
+        .btn-undo { background: #6c757d; color: white; }
+        .btn-del-init { background: #f5f5f5; color: #999; }
+        .confirm-zone { display: none; gap: 8px; }
+        .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
     </style>
 </head>
 <body>
@@ -51,178 +69,219 @@
     </div>
 
     <div id="side-admin-panel">
-        <h2 id="panel-title" style="margin-top:0; cursor: pointer;" onclick="askPassword()">管理中心</h2>
+        <h2 style="margin-top:0">管理中心</h2>
+        <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
+        <input type="text" id="newName" class="input-style" placeholder="输入名称">
+        <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（可批量）</div>
+        <textarea id="newUrls" class="input-style" placeholder="一行一个" style="height:120px; resize:none;"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建新卡片</button>
+        <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="toggleAdmin(false)">退出管理模式</button>
         
-        <div id="unlocked-zone" style="display: none; padding: 10px; background: #f0faff; border-radius: 10px; margin-bottom: 20px;">
-            <p style="font-size:12px; color:#007bff; margin:0 0 10px 0;">已解锁：隐藏内容可用</p>
-            <button class="btn-action" style="background:#555; color:white; font-size:11px;" onclick="toggleLogs()">查看访问记录</button>
-            <div id="log-area"></div>
-            <button class="btn-action" style="background:var(--danger-color); color:white; font-size:11px; margin-top:10px;" onclick="exitPrivilege()">🔒 退出特权模式 (立即隐藏标签)</button>
-        </div>
-
-        <hr style="border:0; border-top:1px solid #eee; margin:15px 0">
-        
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">创建卡片</div>
-        <input type="text" id="newName" class="input-style" placeholder="卡片标题">
-        <textarea id="newUrls" class="input-style" placeholder="批量地址 (一行一个)" style="height:80px; resize:none;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建</button>
-        <button class="btn-action" style="background:#eee; color:#333;" onclick="toggleAdmin(false)">收起侧边栏</button>
-    </div>
-
-    <div id="pwd-overlay">
-        <div id="pwd-box">
-            <h3 id="pwd-title">身份核验</h3>
-            <input type="password" id="adminPwd" class="input-style" placeholder="输入密码">
-            <div style="display:flex; gap:10px">
-                <button class="btn-action" style="background:var(--primary-color); color:white" onclick="submitPwd()">确定</button>
-                <button class="btn-action" style="background:#eee" onclick="closePwd()">取消</button>
+        <div id="log-container">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
+                <span style="font-size:14px; font-weight:bold;">系统日志 (IP与操作)</span>
+                <span style="font-size:10px; color:#999; cursor:pointer" onclick="clearLogs()">清空日志</span>
             </div>
+            <div id="log-list"></div>
         </div>
+        <div id="main-feedback" class="feedback-text"></div>
     </div>
 
-    <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 开启管理模式</button>
+    <div id="float-tools">
+        <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 进入管理中心</button>
+    </div>
 
 <script>
-    // 1. 初始化变量 (isUnlocked 严禁存入 localStorage，确保刷新必锁定)
-    let bloggers = JSON.parse(localStorage.getItem('v4_data')) || [];
-    let accessLogs = JSON.parse(localStorage.getItem('v4_logs')) || [];
+    let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
+    let systemLogs = JSON.parse(localStorage.getItem('navSystemLogs')) || [];
     let isAdminMode = false;
-    let isUnlocked = false; 
-    let currentIP = "0.0.0.0";
-    let task = "unlock";
+    let userIP = "获取中...";
 
-    fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => currentIP = d.ip);
+    // 获取用户IP
+    fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => { userIP = data.ip; })
+        .catch(() => { userIP = "未知IP"; });
 
-    // 2. 严格渲染函数
+    function formatUrl(url) {
+        url = url.trim();
+        if (!url) return "";
+        return /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    }
+
+    // 记录日志功能
+    function addLog(type, content) {
+        const now = new Date();
+        const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
+        const logEntry = {
+            time: timeStr,
+            ip: userIP,
+            type: type,
+            content: content
+        };
+        systemLogs.unshift(logEntry);
+        if(systemLogs.length > 50) systemLogs.pop(); // 最多保留50条
+        localStorage.setItem('navSystemLogs', JSON.stringify(systemLogs));
+        renderLogs();
+    }
+
+    function renderLogs() {
+        const logList = document.getElementById('log-list');
+        logList.innerHTML = systemLogs.map(log => `
+            <div class="log-item">
+                <span style="color:#999">[${log.time}]</span> 
+                <span style="color:#666">${log.ip}</span> 
+                <span class="log-tag">${log.type}</span> 
+                ${log.content}
+            </div>
+        `).join('');
+    }
+
+    function clearLogs() {
+        systemLogs = [];
+        localStorage.removeItem('navSystemLogs');
+        renderLogs();
+    }
+
+    function getAutoLabel(url) {
+        if (url.includes('weibo.com')) return "微博主页";
+        if (url.includes('douyin.com')) return "抖音账号";
+        if (url.includes('bilibili.com')) return "B站账号";
+        return "新链接";
+    }
+
     function render() {
         const grid = document.getElementById('main-grid');
-        grid.innerHTML = bloggers.map((b, i) => {
-            // 【权限隔离核心】：如果 isUnlocked 为 false，所有 isAdmin 标记的链接强制不生成 HTML
-            const displayLinks = isUnlocked ? b.links : b.links.filter(l => l.isAdmin !== true);
-            
-            return `
+        grid.innerHTML = bloggers.map((b, i) => `
             <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
                 <div class="name-row">
                     <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="updateBloggerName(${i}, this.value)">
                 </div>
-                <div class="link-group">
-                    ${displayLinks.map((link, j) => renderLink(link, i, j)).join('')}
+                <div class="link-group" id="link-group-${i}">
+                    ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
                 </div>
                 ${isAdminMode ? `
-                    <button class="add-item-btn" onclick="addLinkInput(${i})">+ 增加</button>
-                    <div style="margin-top:15px; display:flex; gap:5px">
-                        <button class="btn-action" style="background:var(--success-color); color:white; font-size:12px; flex:1" onclick="saveCard(${i})">保存</button>
-                        <button class="btn-action" style="background:#ddd; font-size:12px; flex:1" onclick="deleteCard(${i})">删除卡片</button>
+                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 增加链接</button>
+                <div class="action-btns">
+                    <div id="normalBtns-${i}" style="display:flex; gap:8px">
+                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
+                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${i})">保存卡片</button>
                     </div>
-                ` : ''}
-            </div>`;
-        }).join('');
+                    <div id="confirmZone-${i}" class="confirm-zone">
+                        <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
+                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除</button>
+                    </div>
+                    <div id="card-fb-${i}" class="feedback-text"></div>
+                </div>` : ''}
+            </div>`).join('');
     }
 
-    function renderLink(link, cardI, linkI) {
+    function renderItem(link, cardIdx, linkIdx) {
         if (!isAdminMode) {
             return `
-            <a href="${link.url}" target="_blank" class="link-item-vertical" onclick="recordClick('${link.label}')">
-                <span class="link-label-text">${link.label} ${link.isAdmin ? '<span class="admin-tag-badge">密</span>' : ''}</span>
+            <a href="${formatUrl(link.url)}" target="_blank" class="link-item-vertical" onclick="addLog('访问', '${link.label}')">
+                <span class="link-label-text">${link.label}</span>
                 <span class="link-url-text">${link.url}</span>
             </a>`;
         }
         return `
         <div class="edit-unit">
-            <span style="position:absolute; right:10px; top:5px; cursor:pointer; color:#ccc" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" value="${link.label}">
-            <input type="text" class="url-input" value="${link.url}">
-            <label class="privilege-label">
-                <input type="checkbox" ${link.isAdmin ? 'checked' : ''}> 仅管理员可见
-            </label>
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" value="${link.label}" placeholder="标题">
+            <input type="text" class="url-input" value="${link.url}" placeholder="网址">
         </div>`;
     }
 
-    // 3. 退出特权逻辑 (这是你需要的测试功能)
-    function exitPrivilege() {
-        isUnlocked = false; // 物理重置状态
-        document.getElementById('unlocked-zone').style.display = 'none';
-        document.getElementById('panel-title').innerText = "管理中心";
-        render(); // 立即重新渲染，剔除隐藏标签
-        alert("已成功退出特权模式，隐藏内容已锁定。");
+    function updateBloggerName(i, val) {
+        const oldName = bloggers[i].name;
+        bloggers[i].name = val;
+        saveToLocal();
+        addLog('重命名', `从 ${oldName} 改为 ${val}`);
     }
 
-    // 4. 身份验证逻辑
-    function askPassword() {
-        task = isUnlocked ? "change" : "unlock";
-        document.getElementById('pwd-title').innerText = isUnlocked ? "修改新密码" : "验证隐藏内容";
-        document.getElementById('pwd-overlay').style.display = 'flex';
-    }
-
-    function submitPwd() {
-        const input = document.getElementById('adminPwd').value;
-        const saved = localStorage.getItem('v4_pwd') || "K888";
-
-        if (task === "unlock") {
-            if (input === saved) {
-                isUnlocked = true;
-                document.getElementById('unlocked-zone').style.display = 'block';
-                document.getElementById('panel-title').innerText = "管理中心 (已解锁)";
-                closePwd();
-                render();
-            } else { alert("密码错误"); }
-        } else {
-            if (input) {
-                localStorage.setItem('v4_pwd', input);
-                alert("新密码已生效");
-                closePwd();
-            }
-        }
-    }
-
-    // 5. 辅助功能
-    function recordClick(name) {
-        accessLogs.unshift({ name, ip: currentIP, time: new Date().toLocaleString() });
-        if(accessLogs.length > 50) accessLogs.pop();
-        localStorage.setItem('v4_logs', JSON.stringify(accessLogs));
-    }
-    function toggleAdmin(s) { isAdminMode = s; document.body.classList.toggle('admin-open', s); render(); }
-    function closePwd() { document.getElementById('pwd-overlay').style.display = 'none'; document.getElementById('adminPwd').value = ''; }
-    function persist() { localStorage.setItem('v4_data', JSON.stringify(bloggers)); }
-    function addLinkInput(idx) {
-        const group = document.querySelectorAll('.link-group')[idx];
+    function addNewLinkLine(cardIdx) {
+        const group = document.getElementById(`link-group-${cardIdx}`);
         const div = document.createElement('div');
         div.className = 'edit-unit';
-        div.innerHTML = `<span style="position:absolute; right:10px; top:5px; cursor:pointer; color:#ccc" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="标签名"><input type="text" class="url-input" placeholder="URL">
-            <label class="privilege-label"><input type="checkbox"> 仅管理员可见</label>`;
+        div.innerHTML = `
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" placeholder="链接标题">
+            <input type="text" class="url-input" placeholder="粘贴网址">
+        `;
         group.appendChild(div);
     }
-    function saveCard(idx) {
-        const card = document.querySelectorAll('.blogger-card')[idx];
-        const name = card.querySelector('.blogger-name-input').value;
-        const units = card.querySelectorAll('.edit-unit');
-        let links = [];
-        units.forEach(u => {
-            const label = u.querySelector('.tag-name-input').value;
-            const url = u.querySelector('.url-input').value;
-            const isAdmin = u.querySelector('input[type="checkbox"]').checked;
-            if(url) links.push({ label, url, isAdmin });
-        });
-        bloggers[idx] = { name, links };
-        persist(); render();
-    }
-    function addBlogger() {
-        const name = document.getElementById('newName').value;
-        if(!name) return;
-        bloggers.push({ name, links: [] });
-        persist(); render();
-        document.getElementById('newName').value = '';
-    }
-    function deleteCard(i) { if(confirm("删除卡片？")) { bloggers.splice(i,1); persist(); render(); } }
-    function updateBloggerName(i, v) { bloggers[i].name = v; persist(); }
-    function toggleLogs() {
-        const area = document.getElementById('log-area');
-        area.style.display = area.style.display === 'block' ? 'none' : 'block';
-        area.innerHTML = accessLogs.map(l => `<div>[${l.time}] ${l.ip} -> ${l.name}</div>`).join('') || "无记录";
+
+    function toggleAdmin(show) {
+        isAdminMode = show;
+        document.body.classList.toggle('admin-open', show);
+        render();
+        if(show) renderLogs();
     }
 
-    window.onload = render;
+    function addBlogger() {
+        const name = document.getElementById('newName').value.trim();
+        const rawText = document.getElementById('newUrls').value.trim();
+        if (!name) return;
+        
+        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
+        let validLinks = rawItems.map(url => ({ 
+            url: url.trim(), 
+            label: getAutoLabel(url) 
+        }));
+
+        bloggers.push({ name, links: validLinks });
+        saveAndRender();
+        addLog('新增', `创建卡片: ${name}`);
+        document.getElementById('newName').value = '';
+        document.getElementById('newUrls').value = '';
+    }
+
+    function saveChanges(index) {
+        const card = document.querySelectorAll('.blogger-card')[index];
+        const newName = card.querySelector('.blogger-name-input').value.trim();
+        const units = card.querySelectorAll('.edit-unit');
+        let newLinks = [];
+        units.forEach(u => {
+            const l = u.querySelector('.tag-name-input').value.trim();
+            const url = u.querySelector('.url-input').value.trim();
+            if(url) newLinks.push({ url, label: l || "新链接" });
+        });
+        bloggers[index] = { name: newName, links: newLinks };
+        saveAndRender();
+        addLog('修改', `更新了卡片: ${newName}`);
+        flashFeedback(`card-fb-${index}`, '已保存');
+    }
+
+    function removeBlogger(i) {
+        const name = bloggers[i].name;
+        bloggers.splice(i, 1);
+        saveAndRender();
+        addLog('删除', `删除了卡片: ${name}`);
+    }
+
+    function saveToLocal() {
+        localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
+    }
+
+    function saveAndRender() {
+        saveToLocal();
+        render();
+    }
+
+    function showConfirm(index, isDeleting) {
+        document.getElementById(`normalBtns-${index}`).style.display = isDeleting ? 'none' : 'flex';
+        document.getElementById(`confirmZone-${index}`).style.display = isDeleting ? 'flex' : 'none';
+    }
+
+    function flashFeedback(id, text) {
+        const el = document.getElementById(id);
+        if(el) { el.innerText = text; setTimeout(() => el.innerText = "", 2000); }
+    }
+
+    window.onload = () => {
+        render();
+        renderLogs();
+    };
 </script>
 </body>
 </html>
