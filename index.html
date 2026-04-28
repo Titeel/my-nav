@@ -2,12 +2,11 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 权限隔离修正版</title>
+    <title>聚合导航 - 严格隔离版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; transition: background 0.3s; }
-        body.unlocked { background: #f0faff; } /* 解锁后背景微调，方便分辨 */
-
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; }
+        
         #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; }
         body.admin-open #content-wrapper { margin-right: 340px; }
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
@@ -18,12 +17,12 @@
         .blogger-name-input { border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; width: 100%; }
         
         .link-group { display: flex; flex-direction: column; gap: 10px; }
-        .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; transition: 0.2s; position: relative; }
+        .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; transition: 0.2s; }
         .link-item-vertical:hover { border-color: var(--primary-color); }
         .link-label-text { font-size: 13px; font-weight: bold; color: #333; }
-        .link-url-text { font-size: 11px; color: #999; overflow: hidden; text-overflow: ellipsis; }
+        .link-url-text { font-size: 11px; color: #999; }
         
-        /* 隐藏标签的特殊标记 */
+        /* 隐藏标记 */
         .admin-tag-badge { font-size: 10px; background: #fff1f0; color: #ff4d4f; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffa39e; margin-left: 5px; }
 
         /* 编辑控件 */
@@ -34,12 +33,11 @@
 
         #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; overflow-y: auto; }
         body.admin-open #side-admin-panel { right: 0; }
-        .btn-trigger { position: fixed; bottom: 30px; right: 30px; background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; z-index: 999; font-weight: bold; }
+        .btn-trigger { position: fixed; bottom: 30px; right: 30px; background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; z-index: 999; }
         
         .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; transition: 0.2s; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         
-        /* 弹窗样式 */
         #pwd-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 2000; }
         #pwd-box { background: #fff; padding: 30px; border-radius: 16px; width: 300px; text-align: center; }
 
@@ -53,80 +51,78 @@
     </div>
 
     <div id="side-admin-panel">
-        <h2 id="panel-title" style="margin-top:0; cursor: pointer;" onclick="triggerPwdDialog()">管理中心</h2>
+        <h2 id="panel-title" style="margin-top:0; cursor: pointer;" onclick="askPassword()">管理中心</h2>
         
         <div id="unlocked-zone" style="display: none; padding: 10px; background: #f0faff; border-radius: 10px; margin-bottom: 20px;">
-            <p style="font-size:12px; color:#007bff; margin:0 0 10px 0;">已解锁：隐藏标签 & IP记录</p>
-            <button class="btn-action" style="background:#555; color:white; font-size:12px;" onclick="toggleLogs()">查看 IP 访问日志</button>
+            <p style="font-size:12px; color:#007bff; margin:0 0 10px 0;">已解锁：隐藏内容可用</p>
+            <button class="btn-action" style="background:#555; color:white; font-size:11px;" onclick="toggleLogs()">查看访问记录</button>
             <div id="log-area"></div>
-            <button class="btn-action" style="background:var(--danger-color); color:white; font-size:12px; margin-top:10px;" onclick="lockPrivilege()">🔒 退出特权模式（隐藏标签）</button>
+            <button class="btn-action" style="background:var(--danger-color); color:white; font-size:11px; margin-top:10px;" onclick="exitPrivilege()">🔒 退出特权模式 (立即隐藏标签)</button>
         </div>
 
         <hr style="border:0; border-top:1px solid #eee; margin:15px 0">
         
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">新增卡片</div>
-        <input type="text" id="newName" class="input-style" placeholder="名称">
-        <textarea id="newUrls" class="input-style" placeholder="批量网址 (每行一个)" style="height:80px; resize:none;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建新卡片</button>
+        <div style="font-size:13px; color:#666; margin-bottom:8px;">创建卡片</div>
+        <input type="text" id="newName" class="input-style" placeholder="卡片标题">
+        <textarea id="newUrls" class="input-style" placeholder="批量地址 (一行一个)" style="height:80px; resize:none;"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建</button>
         <button class="btn-action" style="background:#eee; color:#333;" onclick="toggleAdmin(false)">收起侧边栏</button>
     </div>
 
     <div id="pwd-overlay">
         <div id="pwd-box">
-            <h3 id="pwd-title">权限验证</h3>
+            <h3 id="pwd-title">身份核验</h3>
             <input type="password" id="adminPwd" class="input-style" placeholder="输入密码">
             <div style="display:flex; gap:10px">
-                <button class="btn-action" style="background:var(--primary-color); color:white" onclick="handlePwdSubmit()">确定</button>
+                <button class="btn-action" style="background:var(--primary-color); color:white" onclick="submitPwd()">确定</button>
                 <button class="btn-action" style="background:#eee" onclick="closePwd()">取消</button>
             </div>
         </div>
     </div>
 
-    <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 管理 / 编辑</button>
+    <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 开启管理模式</button>
 
 <script>
-    // 数据持久化
-    let bloggers = JSON.parse(localStorage.getItem('vertical_v3_data')) || [];
-    let accessLogs = JSON.parse(localStorage.getItem('vertical_v3_logs')) || [];
-    
-    // 运行状态（刷新页面即重置）
+    // 1. 初始化变量 (isUnlocked 严禁存入 localStorage，确保刷新必锁定)
+    let bloggers = JSON.parse(localStorage.getItem('v4_data')) || [];
+    let accessLogs = JSON.parse(localStorage.getItem('v4_logs')) || [];
     let isAdminMode = false;
     let isUnlocked = false; 
-    let currentIP = "获取中...";
-    let currentTask = "unlock";
+    let currentIP = "0.0.0.0";
+    let task = "unlock";
 
-    // 初始化：获取访问者IP
     fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => currentIP = d.ip);
 
+    // 2. 严格渲染函数
     function render() {
         const grid = document.getElementById('main-grid');
         grid.innerHTML = bloggers.map((b, i) => {
-            // 核心过滤逻辑：未解锁时，彻底剔除 isAdmin 链接
-            const displayLinks = isUnlocked ? b.links : b.links.filter(l => !l.isAdmin);
+            // 【权限隔离核心】：如果 isUnlocked 为 false，所有 isAdmin 标记的链接强制不生成 HTML
+            const displayLinks = isUnlocked ? b.links : b.links.filter(l => l.isAdmin !== true);
             
             return `
             <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="updateCardName(${i}, this.value)">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="updateBloggerName(${i}, this.value)">
                 </div>
                 <div class="link-group">
-                    ${displayLinks.map((link, j) => renderLinkItem(link, i, j)).join('')}
+                    ${displayLinks.map((link, j) => renderLink(link, i, j)).join('')}
                 </div>
                 ${isAdminMode ? `
-                    <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 增加链接</button>
-                    <div style="margin-top:15px; display:flex; gap:8px">
-                        <button class="btn-action" style="background:var(--success-color); color:white; font-size:12px; flex:1" onclick="saveCard(${i})">保存卡片</button>
-                        <button class="btn-action" style="background:#ddd; font-size:12px; flex:0.5" onclick="deleteCard(${i})">删除</button>
+                    <button class="add-item-btn" onclick="addLinkInput(${i})">+ 增加</button>
+                    <div style="margin-top:15px; display:flex; gap:5px">
+                        <button class="btn-action" style="background:var(--success-color); color:white; font-size:12px; flex:1" onclick="saveCard(${i})">保存</button>
+                        <button class="btn-action" style="background:#ddd; font-size:12px; flex:1" onclick="deleteCard(${i})">删除卡片</button>
                     </div>
                 ` : ''}
             </div>`;
         }).join('');
     }
 
-    function renderLinkItem(link, cardI, linkI) {
+    function renderLink(link, cardI, linkI) {
         if (!isAdminMode) {
             return `
-            <a href="${link.url}" target="_blank" class="link-item-vertical" onclick="logAccess('${link.label}')">
+            <a href="${link.url}" target="_blank" class="link-item-vertical" onclick="recordClick('${link.label}')">
                 <span class="link-label-text">${link.label} ${link.isAdmin ? '<span class="admin-tag-badge">密</span>' : ''}</span>
                 <span class="link-url-text">${link.url}</span>
             </a>`;
@@ -137,74 +133,66 @@
             <input type="text" class="tag-name-input" value="${link.label}">
             <input type="text" class="url-input" value="${link.url}">
             <label class="privilege-label">
-                <input type="checkbox" ${link.isAdmin ? 'checked' : ''}> 仅管理员可见 (需密码)
+                <input type="checkbox" ${link.isAdmin ? 'checked' : ''}> 仅管理员可见
             </label>
         </div>`;
     }
 
-    // IP 记录逻辑
-    function logAccess(name) {
-        const log = { name, ip: currentIP, time: new Date().toLocaleString() };
-        accessLogs.unshift(log);
-        if(accessLogs.length > 50) accessLogs.pop();
-        localStorage.setItem('vertical_v3_logs', JSON.stringify(accessLogs));
+    // 3. 退出特权逻辑 (这是你需要的测试功能)
+    function exitPrivilege() {
+        isUnlocked = false; // 物理重置状态
+        document.getElementById('unlocked-zone').style.display = 'none';
+        document.getElementById('panel-title').innerText = "管理中心";
+        render(); // 立即重新渲染，剔除隐藏标签
+        alert("已成功退出特权模式，隐藏内容已锁定。");
     }
 
-    // 权限与密码逻辑
-    function triggerPwdDialog() {
-        currentTask = isUnlocked ? "change" : "unlock";
-        document.getElementById('pwd-title').innerText = isUnlocked ? "修改管理密码" : "解锁隐藏标签";
+    // 4. 身份验证逻辑
+    function askPassword() {
+        task = isUnlocked ? "change" : "unlock";
+        document.getElementById('pwd-title').innerText = isUnlocked ? "修改新密码" : "验证隐藏内容";
         document.getElementById('pwd-overlay').style.display = 'flex';
-        document.getElementById('adminPwd').focus();
     }
 
-    function handlePwdSubmit() {
+    function submitPwd() {
         const input = document.getElementById('adminPwd').value;
-        const saved = localStorage.getItem('vertical_v3_pwd') || "K888";
+        const saved = localStorage.getItem('v4_pwd') || "K888";
 
-        if (currentTask === "unlock") {
+        if (task === "unlock") {
             if (input === saved) {
                 isUnlocked = true;
-                document.body.classList.add('unlocked');
                 document.getElementById('unlocked-zone').style.display = 'block';
-                document.getElementById('panel-title').innerText = "管理中心 (已提权)";
+                document.getElementById('panel-title').innerText = "管理中心 (已解锁)";
                 closePwd();
                 render();
             } else { alert("密码错误"); }
         } else {
             if (input) {
-                localStorage.setItem('vertical_v3_pwd', input);
-                alert("密码修改成功");
+                localStorage.setItem('v4_pwd', input);
+                alert("新密码已生效");
                 closePwd();
             }
         }
     }
 
-    // 手动退出特权（测试用）
-    function lockPrivilege() {
-        isUnlocked = false;
-        document.body.classList.remove('unlocked');
-        document.getElementById('unlocked-zone').style.display = 'none';
-        document.getElementById('panel-title').innerText = "管理中心";
-        render(); // 重新渲染，此时 isAdmin 链接会被剔除
+    // 5. 辅助功能
+    function recordClick(name) {
+        accessLogs.unshift({ name, ip: currentIP, time: new Date().toLocaleString() });
+        if(accessLogs.length > 50) accessLogs.pop();
+        localStorage.setItem('v4_logs', JSON.stringify(accessLogs));
     }
-
-    // 侧边栏及基础操作
     function toggleAdmin(s) { isAdminMode = s; document.body.classList.toggle('admin-open', s); render(); }
     function closePwd() { document.getElementById('pwd-overlay').style.display = 'none'; document.getElementById('adminPwd').value = ''; }
-    function saveAll() { localStorage.setItem('vertical_v3_data', JSON.stringify(bloggers)); }
-
-    function addNewLinkLine(idx) {
+    function persist() { localStorage.setItem('v4_data', JSON.stringify(bloggers)); }
+    function addLinkInput(idx) {
         const group = document.querySelectorAll('.link-group')[idx];
         const div = document.createElement('div');
         div.className = 'edit-unit';
         div.innerHTML = `<span style="position:absolute; right:10px; top:5px; cursor:pointer; color:#ccc" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="名称">
-            <input type="text" class="url-input" placeholder="网址">
-            <label class="privilege-label"><input type="checkbox"> 仅管理员可见 (需密码)</label>`;
+            <input type="text" class="tag-name-input" placeholder="标签名"><input type="text" class="url-input" placeholder="URL">
+            <label class="privilege-label"><input type="checkbox"> 仅管理员可见</label>`;
         group.appendChild(div);
     }
-
     function saveCard(idx) {
         const card = document.querySelectorAll('.blogger-card')[idx];
         const name = card.querySelector('.blogger-name-input').value;
@@ -217,25 +205,21 @@
             if(url) links.push({ label, url, isAdmin });
         });
         bloggers[idx] = { name, links };
-        saveAll();
-        render();
+        persist(); render();
     }
-
     function addBlogger() {
         const name = document.getElementById('newName').value;
-        const urls = document.getElementById('newUrls').value.split('\n').filter(u => u.trim());
         if(!name) return;
-        bloggers.push({ name, links: urls.map(u => ({ label: "新链接", url: u, isAdmin: false })) });
-        saveAll(); render();
-        document.getElementById('newName').value = ''; document.getElementById('newUrls').value = '';
+        bloggers.push({ name, links: [] });
+        persist(); render();
+        document.getElementById('newName').value = '';
     }
-
-    function deleteCard(i) { if(confirm("确定删除整个卡片？")) { bloggers.splice(i,1); saveAll(); render(); } }
-    function updateCardName(i, val) { bloggers[i].name = val; saveAll(); }
+    function deleteCard(i) { if(confirm("删除卡片？")) { bloggers.splice(i,1); persist(); render(); } }
+    function updateBloggerName(i, v) { bloggers[i].name = v; persist(); }
     function toggleLogs() {
         const area = document.getElementById('log-area');
         area.style.display = area.style.display === 'block' ? 'none' : 'block';
-        area.innerHTML = accessLogs.map(l => `<div>[${l.time}] ${l.ip} -> ${l.name}</div>`).join('') || "暂无记录";
+        area.innerHTML = accessLogs.map(l => `<div>[${l.time}] ${l.ip} -> ${l.name}</div>`).join('') || "无记录";
     }
 
     window.onload = render;
