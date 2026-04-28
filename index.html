@@ -2,8 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 深度编辑版</title>
+    <title>聚合导航 - 深度编辑验证版</title>
     <style>
+        /* 保持你原有的所有样式 */
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
         
@@ -16,156 +17,232 @@
             width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
         }
+        .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
 
-        .name-row { font-size: 18px; font-weight: bold; color: #222; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 85%; }
         
         .link-group { display: flex; flex-direction: column; gap: 10px; }
         .link-item-vertical {
             display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none;
         }
         .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
-        .link-label-text { font-size: 13px; font-weight: bold; color: #333; }
+        .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
+        .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 侧边栏管理面板 */
+        /* 编辑状态 UI */
+        .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
+        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
+        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; }
+        
+        .remove-link-btn { position: absolute; top: 8px; right: 8px; color: #ccc; cursor: pointer; font-size: 16px; line-height: 1; }
+        .remove-link-btn:hover { color: var(--danger-color); }
+
+        .add-item-btn { width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .add-item-btn:hover { background: #f0f7ff; }
+
+        /* 侧边栏样式 */
         #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; }
         body.admin-open #side-admin-panel { right: 0; }
         
-        /* 交互核心：管理中心四个字图标 */
-        .admin-header-trigger { cursor: pointer; display: inline-block; user-select: none; }
-        .admin-header-trigger:hover { color: var(--primary-color); }
+        /* 管理中心标题交互 */
+        #admin-title-btn { cursor: pointer; display: inline-block; user-select: none; }
+        #admin-title-btn:hover { color: var(--primary-color); }
+        #admin-auth-content { display: none; } /* 默认隐藏，验证后显示 */
 
-        #admin-real-content { display: none; margin-top: 20px; }
-
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; background: var(--primary-color); color: white; }
-        
-        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
+        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; display: flex; gap: 10px; }
         .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; }
+        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .action-btns { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
+        .btn-base { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .btn-save { background: var(--success-color); color: white; }
+        .btn-undo { background: #6c757d; color: white; }
+        .btn-del-init { background: #f5f5f5; color: #999; }
+        .confirm-zone { display: none; gap: 8px; }
+        .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
     </style>
 </head>
 <body>
 
     <div id="content-wrapper">
-        <div id="main-grid">
-            <div style="grid-column: 1/-1; text-align: center; color: #999; margin-top: 50px;">正在连接云端数据...</div>
-        </div>
+        <div id="main-grid"></div>
     </div>
 
     <div id="side-admin-panel">
-        <h2 class="admin-header-trigger" onclick="handleAdminAuth()">⚙️ 管理中心</h2>
-        <p id="auth-status" style="font-size:12px; color:#999; margin-top:5px;">(点击上方文字图标解锁)</p>
+        <h2 id="admin-title-btn" onclick="checkPassword()">⚙️ 管理中心</h2>
+        <p id="lock-tip" style="font-size:12px; color:#999; margin-top:5px;">(点击上方文字输入密码解锁功能)</p>
 
-        <div id="admin-real-content">
+        <div id="admin-auth-content">
             <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
+            <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
             <input type="text" id="newName" class="input-style" placeholder="输入名称">
+            <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（可批量）</div>
             <textarea id="newUrls" class="input-style" placeholder="输入网址，自动识别" style="height:150px; resize:none;"></textarea>
-            <button class="btn-action" onclick="cloudSave()">确认创建并同步云端</button>
-            <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="togglePanel(false)">退出管理</button>
-            <p style="font-size:10px; color:#ddd; text-align:center; cursor:pointer;" onclick="localStorage.clear();location.reload();">重置本地缓存</p>
+            <button class="btn-action" style="background:var(--primary-color); color:white;" id="add-btn">确认创建卡片</button>
+            <button class="btn-action" style="background:#f5f5f5; color:#666;" id="close-admin-btn">退出管理</button>
+            <div id="main-feedback" class="feedback-text"></div>
         </div>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" onclick="togglePanel(true)">⚙️ 管理控制台</button>
+        <button class="btn-trigger" id="master-admin-btn">⚙️ 管理中心</button>
     </div>
 
 <script>
-    const GITHUB = { owner: 'Titeel', repo: 'my-nav', file: 'data.json' };
-    let allData = { LU: [], K: [], config: { pwd_k: "K888" } };
-    let currentSha = "";
+    let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
+    let isAdminMode = false;
+    let isUnlocked = false; // 记录是否通过了密码验证
 
-    // 1. 初始化数据获取
-    async function fetchData() {
-        const grid = document.getElementById('main-grid');
-        try {
-            const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}?t=${Date.now()}`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error("仓库配置错误");
-            const json = await res.json();
-            currentSha = json.sha;
-            allData = JSON.parse(decodeURIComponent(escape(atob(json.content))));
-            render('LU');
-        } catch (e) {
-            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:red;">初始化失败：请确保仓库中有 data.json 且配置正确。</div>`;
+    document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('master-admin-btn').onclick = () => toggleAdmin(true);
+        document.getElementById('close-admin-btn').onclick = () => toggleAdmin(false);
+        document.getElementById('add-btn').onclick = addBlogger;
+        render();
+    });
+
+    // 你要求的核心功能：点击管理中心四个字呼出输入密码
+    function checkPassword() {
+        const pwd = prompt("请输入管理员密码：");
+        if (pwd === "K888") {
+            isUnlocked = true;
+            document.getElementById('admin-auth-content').style.display = 'block';
+            document.getElementById('lock-tip').innerHTML = "<span style='color:green'>✅ 权限已解锁</span>";
+            render(); // 刷新渲染，进入编辑模式
+        } else {
+            alert("密码错误，无法开启管理功能");
         }
     }
 
-    function render(role) {
+    function getAutoLabel(url) {
+        if (url.includes('weibo.com')) return "微博主页";
+        if (url.includes('douyin.com')) return "抖音账号";
+        if (url.includes('bilibili.com')) return "B站账号";
+        return "新链接";
+    }
+
+    function render() {
         const grid = document.getElementById('main-grid');
-        const data = allData[role] || [];
-        if (data.length === 0) {
-            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ccc; margin-top:50px;">暂无数据，请在管理中心添加。</div>`;
-            return;
-        }
-        grid.innerHTML = data.map(b => `
-            <div class="blogger-card">
-                <div class="name-row">${b.name}</div>
-                <div class="link-group">
-                    ${b.links.map(l => `<a href="${l.url}" target="_blank" class="link-item-vertical"><span class="link-label-text">${l.label}</span></a>`).join('')}
+        // 只有密码验证通过且侧边栏打开，才进入 isAdminMode
+        const showEdit = isAdminMode && isUnlocked;
+        
+        grid.innerHTML = bloggers.map((b, i) => `
+            <div class="blogger-card ${showEdit ? 'edit-mode-active' : ''}">
+                <div class="name-row">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!showEdit ? 'readonly' : ''}>
                 </div>
+                <div class="link-group" id="link-group-${i}">
+                    ${b.links.map((link, j) => renderItem(link, i, j, showEdit)).join('')}
+                </div>
+                ${showEdit ? `
+                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
+                <div class="action-btns">
+                    <div id="normalBtns-${i}" style="display:flex; gap:8px">
+                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
+                        <button class="btn-base btn-undo" onclick="render()">取消</button>
+                        <button class="btn-base btn-save" onclick="saveChanges(${i})">保存当前卡片</button>
+                    </div>
+                    <div id="confirmZone-${i}" class="confirm-zone">
+                        <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
+                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除卡片</button>
+                    </div>
+                    <div id="card-fb-${i}" class="feedback-text"></div>
+                </div>` : ''}
             </div>`).join('');
     }
 
-    // 2. 核心交互：点击“管理中心”四个字触发验证
-    function handleAdminAuth() {
-        const pwd = prompt("请输入管理员密码：");
-        if (pwd === (allData.config?.pwd_k || "K888")) {
-            let token = localStorage.getItem('gh_token');
-            if (!token) {
-                token = prompt("检测到首次登录，请输入 GitHub Token:");
-                if (token) localStorage.setItem('gh_token', token);
-            }
-            if (token) {
-                document.getElementById('admin-real-content').style.display = 'block';
-                document.getElementById('auth-status').innerText = "✅ 已解锁管理员权限";
-                render('K'); // 验证成功自动切到 K 数据
-            }
-        } else {
-            alert("密码错误");
+    function renderItem(link, cardIdx, linkIdx, showEdit) {
+        if (!showEdit) {
+            return `
+            <a href="${link.url}" target="_blank" class="link-item-vertical">
+                <span class="link-label-text">${link.label}</span>
+                <span class="link-url-text">${link.url}</span>
+            </a>`;
         }
+        return `
+        <div class="edit-unit" data-link-idx="${linkIdx}">
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" value="${link.label}">
+            <input type="text" class="url-input" value="${link.url}">
+        </div>`;
     }
 
-    function togglePanel(show) {
+    function addNewLinkLine(cardIdx) {
+        const group = document.getElementById(`link-group-${cardIdx}`);
+        const div = document.createElement('div');
+        div.className = 'edit-unit';
+        div.innerHTML = `
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" placeholder="链接标题">
+            <input type="text" class="url-input" placeholder="粘贴网址 https://...">
+        `;
+        group.appendChild(div);
+    }
+
+    function toggleAdmin(show) {
+        isAdminMode = show;
         document.body.classList.toggle('admin-open', show);
-    }
-
-    // 3. 云端保存逻辑
-    async function cloudSave() {
-        const token = localStorage.getItem('gh_token');
-        const name = document.getElementById('newName').value.trim();
-        const urls = document.getElementById('newUrls').value.trim().split('\n').filter(u => u.trim());
-
-        if (!token) return alert("缺少 Token");
-        if (!name || urls.length === 0) return alert("请填写完整内容");
-
-        // 构建新数据
-        const newCard = { name: name, links: urls.map(u => ({ label: "新链接", url: u.trim() })) };
-        allData.K.push(newCard);
-
-        try {
-            const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    message: "Web update",
-                    content: btoa(unescape(encodeURIComponent(JSON.stringify(allData, null, 2)))),
-                    sha: currentSha
-                })
-            });
-
-            if (res.ok) {
-                alert("云端同步成功！页面将刷新。");
-                location.reload();
-            } else {
-                const err = await res.json();
-                alert("保存失败：" + err.message);
-            }
-        } catch (e) {
-            alert("网络请求失败");
+        // 如果退出管理，自动锁定
+        if(!show) {
+            isUnlocked = false;
+            document.getElementById('admin-auth-content').style.display = 'none';
+            document.getElementById('lock-tip').innerText = "(点击上方文字输入密码解锁功能)";
         }
+        render();
     }
 
-    window.onload = fetchData;
+    function addBlogger() {
+        const name = document.getElementById('newName').value.trim();
+        const rawText = document.getElementById('newUrls').value.trim();
+        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
+        let validLinks = [];
+        rawItems.forEach(item => {
+            let url = item.trim();
+            if (!url.includes('.')) return;
+            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+            validLinks.push({ url, label: getAutoLabel(url) });
+        });
+        if (!name) return;
+        bloggers.push({ name, links: validLinks });
+        saveAndRender();
+        document.getElementById('newName').value = '';
+        document.getElementById('newUrls').value = '';
+    }
+
+    function saveChanges(index) {
+        const card = document.querySelectorAll('.blogger-card')[index];
+        const newName = card.querySelector('.blogger-name-input').value.trim();
+        const units = card.querySelectorAll('.edit-unit');
+        let newLinks = [];
+        units.forEach(u => {
+            const l = u.querySelector('.tag-name-input').value.trim();
+            const url = u.querySelector('.url-input').value.trim();
+            if(url) newLinks.push({ url, label: l || "新链接" });
+        });
+        bloggers[index] = { name: newName, links: newLinks };
+        saveAndRender();
+        flashFeedback(`card-fb-${index}`, '已保存成功');
+    }
+
+    function removeBlogger(i) {
+        bloggers.splice(i, 1);
+        saveAndRender();
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
+        render();
+    }
+
+    function showConfirm(index, isDeleting) {
+        document.getElementById(`normalBtns-${index}`).style.display = isDeleting ? 'none' : 'flex';
+        document.getElementById(`confirmZone-${index}`).style.display = isDeleting ? 'flex' : 'none';
+    }
+
+    function flashFeedback(id, text) {
+        const el = document.getElementById(id);
+        if(el) { el.innerText = text; setTimeout(() => el.innerText = "", 2000); }
+    }
 </script>
 </body>
 </html>
