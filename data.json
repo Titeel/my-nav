@@ -1,28 +1,13 @@
 {
-  "LU": [],
-  "K": [],
-  "config": {
-    "pwd_lu": "",
-    "pwd_k": "K888"
-  }
-}
-{
   "LU": [
     {
-      "name": "博主推荐",
+      "name": "导航示例",
       "links": [
         { "label": "百度", "url": "https://www.baidu.com" }
       ]
     }
   ],
-  "K": [
-    {
-      "name": "我的私藏",
-      "links": [
-        { "label": "GitHub", "url": "https://github.com" }
-      ]
-    }
-  ],
+  "K": [],
   "config": {
     "pwd_lu": "",
     "pwd_k": "K888"
