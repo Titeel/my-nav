@@ -3,230 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>K & LU 导航中心</title>
+    <title>我的私人导航站</title>
     <style>
-        :root { --k-color: #6f42c1; --lu-color: #28a745; --bg: #f4f7f9; --text: #333; }
-        body { font-family: "Microsoft YaHei", -apple-system, sans-serif; background: var(--bg); margin: 0; display: none; min-height: 100vh; color: var(--text); }
+        :root { --k-color: #6f42c1; --lu-color: #28a745; --bg: #f4f7f9; --text: #333; --primary: #007bff; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: var(--bg); margin: 0; display: none; min-height: 100vh; color: var(--text); }
         
         /* 导航头部 */
-        .nav-header { background: #fff; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: center; gap: 15px; position: sticky; top: 0; z-index: 100; cursor: pointer; }
+        .nav-header { background: #fff; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: center; gap: 15px; position: sticky; top: 0; z-index: 100; }
         .user-btn { padding: 10px 25px; border-radius: 20px; border: 1px solid #eee; cursor: pointer; font-weight: bold; transition: 0.3s; background: #f9f9f9; outline: none; }
         .active-k { background: var(--k-color) !important; color: white; border-color: var(--k-color); }
         .active-lu { background: var(--lu-color) !important; color: white; border-color: var(--lu-color); }
 
         /* 内容区 */
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; padding: 30px; justify-content: center; }
-        .blogger-card { width: 340px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box; }
+        .blogger-card { width: 340px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box; position: relative; }
         .card-title { font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; font-size: 16px; }
-        .link-item { display: block; padding: 12px; margin: 8px 0; background: #fdfdfd; border: 1px solid #f0f0f0; border-radius: 8px; text-decoration: none; color: #007bff; font-size: 14px; font-weight: bold; transition: 0.2s; }
-        .link-item:hover { background: #f0f7ff; border-color: #007bff; transform: translateY(-1px); }
+        .link-item { display: block; padding: 12px; margin: 8px 0; background: #fdfdfd; border: 1px solid #f0f0f0; border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 14px; font-weight: bold; transition: 0.2s; }
+        .link-item:hover { background: #f0f7ff; border-color: var(--primary); transform: translateY(-1px); }
 
-        /* 管理面板 */
-        #admin-panel { position: fixed; bottom: 20px; left: 20px; z-index: 1000; display: none; gap: 10px; }
-        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 25px; border-radius: 12px; box-shadow: 0 0 40px rgba(0,0,0,0.25); z-index: 2000; width: 90%; max-width: 400px; box-sizing: border-box; }
-        .modal input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        .btn-black { background: #333; color: white; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; }
-        .btn-save { background: var(--lu-color); color: white; border: none; padding: 14px; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; font-weight: bold; font-size: 15px; }
+        /* 右侧侧边栏管理面板 */
+        #side-admin-panel { position: fixed; top: 0; right: -360px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1000; padding: 30px 20px; box-sizing: border-box; overflow-y: auto; }
+        body.admin-open #side-admin-panel { right: 0; }
         
-        /* 审计表格 */
-        #log-modal { max-width: 800px; width: 90%; max-height: 80vh; overflow-y: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-        th, td { border: 1px solid #eee; padding: 10px; text-align: left; }
-        th { background: #f8f9fa; }
+        /* 标题验证图标样式 */
+        .admin-title-wrap { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; user-select: none; padding: 5px; border-radius: 5px; }
+        .admin-title-wrap:hover { background: #f8f9fa; }
+
+        /* 管理表单默认隐藏 */
+        #admin-form-content { display: none; margin-top: 20px; }
+
+        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; background: var(--primary); color: white; }
+        
+        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body id="b-body">
 
-    <div class="nav-header" id="nav-header" ondblclick="triggerAdminLogin()" title="双击空白处登录管理员">
-        <button id="btn-lu" class="user-btn" onclick="switchUser('LU')">LU 的名称</button>
-        <button id="btn-k" class="user-btn" onclick="switchUser('K')" style="display: none;">K 的名称</button>
+    <div class="nav-header">
+        <button id="btn-lu" class="user-btn" onclick="switchUser('LU')">LU 的内容</button>
+        <button id="btn-k" class="user-btn" onclick="switchUser('K')" style="display: none;">K 的内容</button>
     </div>
 
     <div id="main-grid"></div>
 
-    <div id="admin-panel">
-        <button class="btn-black" onclick="showModal('log-modal')">📊 审计统计</button>
-        <button class="btn-black" onclick="showModal('pwd-modal')">🔑 修改密码</button>
+    <div id="side-admin-panel">
+        <div class="admin-title-wrap" onclick="verifyAdminAccess()">
+            <h2 style="margin:0">⚙️ 管理中心</h2>
+        </div>
+        <p id="lock-tip" style="font-size:12px; color:#999; margin-top:8px;">(点击上方标题图标解锁管理权限)</p>
+        
+        <div id="admin-form-content">
+            <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
+            <div style="font-size:13px; color:#666; margin-bottom:8px;">分类名称</div>
+            <input type="text" id="newName" class="input-style" placeholder="如：常用工具">
+            <div style="font-size:13px; color:#666; margin-bottom:8px;">链接列表 (每行一个网址)</div>
+            <textarea id="newUrls" class="input-style" placeholder="https://..." style="height:120px; resize:none;"></textarea>
+            <button class="btn-action" onclick="addNewCard()">确认创建并同步</button>
+            <button class="btn-action" style="background:#6c757d;" onclick="alert('审计功能开发中')">📊 查看审计日志</button>
+            <button class="btn-action" style="background:#f8f9fa; color:#333;" onclick="toggleAdminPanel(false)">关闭面板</button>
+            <p style="font-size:11px; color:#ccc; text-align:center; margin-top:20px;" onclick="logoutAdmin()">清除本地 Token 缓存</p>
+        </div>
     </div>
 
-    <div id="pwd-modal" class="modal">
-        <h3 style="margin:0 0 10px 0">密码管理中心</h3>
-        <p style="font-size:12px; color:#666; margin-bottom:15px;">提示：LU 密码留空则无需密码访问</p>
-        <label style="font-size:13px; font-weight:bold;">LU 的访问密码:</label>
-        <input type="text" id="new-pwd-lu" placeholder="留空即免密">
-        <label style="font-size:13px; font-weight:bold;">K 的管理员密码:</label>
-        <input type="text" id="new-pwd-k">
-        <button class="btn-save" onclick="updatePasswords()">同步到 GitHub 云端</button>
-        <button class="btn-black" onclick="closeModal()" style="width:100%; margin-top:8px; background:#eee; color:#333">取消</button>
-    </div>
-
-    <div id="log-modal" class="modal">
-        <h3 style="margin:0">访客 IP 审计记录</h3>
-        <table>
-            <thead><tr><th>访问时间</th><th>IP 地址</th><th>身份级别</th></tr></thead>
-            <tbody id="log-body"></tbody>
-        </table>
-        <button class="btn-black" onclick="closeModal()" style="margin-top:20px; width:100%">关闭</button>
+    <div id="float-tools">
+        <button class="btn-trigger" onclick="toggleAdminPanel(true)">⚙️ 打开管理面板</button>
     </div>
 
 <script>
     const CONFIG = {
-        owner: 'Titeel', 
-        repo: 'my-nav',
-        token: '', 
-        paths: { data: 'data.json', logs: 'logs.json' },
-        sha: '' 
-    };
-
-    let allData = {};
-    let currentRole = 'guest';
-
-    // 核心启动函数
-    async function init() {
-        try {
-            // 获取数据
-            const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.paths.data}?t=${Date.now()}`);
-            const json = await res.json();
-            CONFIG.sha = json.sha;
-            allData = JSON.parse(decodeURIComponent(escape(atob(json.content))));
-            
-            const pwdLU = allData.config?.pwd_lu || "";
-            const pwdK = allData.config?.pwd_k || "K888";
-
-            // 判断 LU 权限
-            if (pwdLU === "") {
-                currentRole = 'guest';
-                enterSite();
-            } else {
-                const input = prompt("请输入访问密码：");
-                if (input === pwdK) {
-                    await loginAsAdmin(pwdK);
-                } else if (input === pwdLU) {
-                    currentRole = 'guest';
-                    enterSite();
-                } else {
-                    alert("密码错误");
-                    window.location.reload();
-                }
-            }
-        } catch (e) {
-            console.error(e);
-            alert("初始化失败，请检查仓库文件是否正确。");
-        }
-    }
-
-    function enterSite() {
-        document.getElementById('b-body').style.display = 'block';
-        recordVisit(); // 记录 IP
-        switchUser('LU');
-    }
-
-    async function loginAsAdmin(pwdK) {
-        currentRole = 'admin';
-        CONFIG.token = prompt("请输入 GitHub Token (用于管理):");
-        if(!CONFIG.token) { alert("未输入Token，无法使用管理功能"); }
-        document.getElementById('btn-k').style.display = 'inline-block';
-        document.getElementById('admin-panel').style.display = 'flex';
-        document.getElementById('new-pwd-lu').value = allData.config?.pwd_lu || "";
-        document.getElementById('new-pwd-k').value = pwdK;
-        enterSite();
-        switchUser('K');
-    }
-
-    // 隐藏登录：双击顶部
-    function triggerAdminLogin() {
-        if (currentRole === 'admin') return;
-        const pwd = prompt("管理员密码验证：");
-        if (pwd === (allData.config?.pwd_k || "K888")) {
-            loginAsAdmin(pwd);
-        } else {
-            alert("验证失败");
-        }
-    }
-
-    // 修改密码并上传 GitHub
-    async function updatePasswords() {
-        if (!CONFIG.token) return alert("当前无管理权限，请重新登录输入 Token");
-        const lu = document.getElementById('new-pwd-lu').value.trim();
-        const k = document.getElementById('new-pwd-k').value.trim();
-        
-        allData.config = { pwd_lu: lu, pwd_k: k };
-
-        const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.paths.data}`, {
-            method: 'PUT',
-            headers: { 'Authorization': `token ${CONFIG.token}` },
-            body: JSON.stringify({
-                message: "update nav config",
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(allData, null, 2)))),
-                sha: CONFIG.sha
-            })
-        });
-
-        if (res.ok) {
-            const up = await res.json();
-            CONFIG.sha = up.content.sha;
-            alert("密码保存成功！LU 已设为: " + (lu === "" ? "公开访问" : lu));
-            closeModal();
-        } else {
-            alert("保存失败，请检查 Token 权限及网络");
-        }
-    }
-
-    // 访问审计记录
-    async function recordVisit() {
-        try {
-            const ipFetch = await fetch('https://api.ipify.org?format=json');
-            const ipJson = await ipFetch.json();
-            const logRes = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.paths.logs}?t=${Date.now()}`);
-            const logFile = await logRes.json();
-            let logs = JSON.parse(atob(logFile.content));
-            
-            logs.push({ t: new Date().toLocaleString('zh-CN'), ip: ipJson.ip, role: currentRole });
-            if (logs.length > 300) logs.shift(); // 限制记录数量
-
-            // 只有管理员身份登录后才静默同步审计记录到云端
-            if (CONFIG.token) {
-                await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.paths.logs}`, {
-                    method: 'PUT',
-                    headers: { 'Authorization': `token ${CONFIG.token}` },
-                    body: JSON.stringify({
-                        message: "audit update",
-                        content: btoa(unescape(encodeURIComponent(JSON.stringify(logs)))),
-                        sha: logFile.sha
-                    })
-                });
-            }
-        } catch(e) {}
-    }
-
-    // 切换用户视图
-    function switchUser(user) {
-        document.getElementById('btn-lu').classList.toggle('active-lu', user === 'LU');
-        document.getElementById('btn-k').classList.toggle('active-k', user === 'K');
-        const grid = document.getElementById('main-grid');
-        grid.innerHTML = (allData[user] || []).map(card => `
-            <div class="blogger-card">
-                <div class="card-title">${card.name}</div>
-                ${card.links.map(l => `<a href="${l.url}" target="_blank" class="link-item">${l.label}</a>`).join('')}
-            </div>
-        `).join('');
-    }
-
-    function showModal(id) { 
-        if(id === 'log-modal') loadLogs();
-        document.getElementById(id).style.display = 'block'; 
-    }
-
-    async function loadLogs() {
-        const res = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.paths.logs}?t=${Date.now()}`);
-        const file = await res.json();
-        const logs = JSON.parse(atob(file.content)).reverse();
-        document.getElementById('log-body').innerHTML = logs.map(l => `<tr><td>${l.t}</td><td>${l.ip}</td><td>${l.role}</td></tr>`).join('');
-    }
-
-    function closeModal() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-
-    init();
-</script>
-</body>
-</html>
+        owner: 'Titeel', // 您的 GitHub 用户名
+        repo: 'my-nav',  // 您的仓库名
+        token: '',
