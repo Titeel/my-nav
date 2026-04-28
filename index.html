@@ -2,77 +2,121 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的私人导航站</title>
+    <title>聚合导航 - 云端同步版</title>
     <style>
-        :root { --k-color: #6f42c1; --lu-color: #28a745; --bg: #f4f7f9; --text: #333; --primary: #007bff; }
-        body { font-family: "Microsoft YaHei", sans-serif; background: var(--bg); margin: 0; display: none; min-height: 100vh; color: var(--text); }
+        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: none; }
         
-        /* 导航头部 */
-        .nav-header { background: #fff; padding: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); display: flex; justify-content: center; gap: 15px; position: sticky; top: 0; z-index: 100; }
-        .user-btn { padding: 10px 25px; border-radius: 20px; border: 1px solid #eee; cursor: pointer; font-weight: bold; transition: 0.3s; background: #f9f9f9; outline: none; }
-        .active-k { background: var(--k-color) !important; color: white; border-color: var(--k-color); }
-        .active-lu { background: var(--lu-color) !important; color: white; border-color: var(--lu-color); }
+        #content-wrapper { flex: 1; padding: 40px; box-sizing: border-box; }
+        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
+        
+        .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; box-sizing: border-box; }
+        .name-row { font-weight: bold; font-size: 18px; border-bottom: 2px solid #f0f0f0; margin-bottom: 15px; padding-bottom: 10px; }
+        
+        .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; margin-bottom: 8px; }
+        .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
+        .link-label-text { font-size: 13px; font-weight: bold; color: #333; }
 
-        /* 内容区 */
-        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; padding: 30px; justify-content: center; }
-        .blogger-card { width: 340px; background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); box-sizing: border-box; position: relative; }
-        .card-title { font-weight: bold; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; font-size: 16px; }
-        .link-item { display: block; padding: 12px; margin: 8px 0; background: #fdfdfd; border: 1px solid #f0f0f0; border-radius: 8px; text-decoration: none; color: var(--primary); font-size: 14px; font-weight: bold; transition: 0.2s; }
-        .link-item:hover { background: #f0f7ff; border-color: var(--primary); transform: translateY(-1px); }
-
-        /* 右侧侧边栏管理面板 */
-        #side-admin-panel { position: fixed; top: 0; right: -360px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1000; padding: 30px 20px; box-sizing: border-box; overflow-y: auto; }
+        /* 侧边栏 */
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1000; padding: 30px 20px; box-sizing: border-box; }
         body.admin-open #side-admin-panel { right: 0; }
         
-        /* 标题验证图标样式 */
-        .admin-title-wrap { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; user-select: none; padding: 5px; border-radius: 5px; }
-        .admin-title-wrap:hover { background: #f8f9fa; }
+        /* 关键：点击标题图标验证 */
+        #admin-title { cursor: pointer; display: inline-flex; align-items: center; gap: 5px; user-select: none; }
+        #admin-content { display: none; margin-top: 20px; }
 
-        /* 管理表单默认隐藏 */
-        #admin-form-content { display: none; margin-top: 20px; }
-
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; background: var(--primary); color: white; }
+        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: var(--primary-color); color: white; }
         
-        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        #float-tools { position: fixed; bottom: 30px; right: 30px; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; }
     </style>
 </head>
-<body id="b-body">
+<body id="main-body">
 
-    <div class="nav-header">
-        <button id="btn-lu" class="user-btn" onclick="switchUser('LU')">LU 的内容</button>
-        <button id="btn-k" class="user-btn" onclick="switchUser('K')" style="display: none;">K 的内容</button>
+    <div id="content-wrapper">
+        <div id="main-grid"></div>
     </div>
 
-    <div id="main-grid"></div>
-
     <div id="side-admin-panel">
-        <div class="admin-title-wrap" onclick="verifyAdminAccess()">
-            <h2 style="margin:0">⚙️ 管理中心</h2>
-        </div>
-        <p id="lock-tip" style="font-size:12px; color:#999; margin-top:8px;">(点击上方标题图标解锁管理权限)</p>
-        
-        <div id="admin-form-content">
+        <h2 id="admin-title" onclick="unlockAdmin()">⚙️ 管理中心</h2>
+        <p id="lock-hint" style="font-size:12px; color:#999;">(点击上方文字验证权限)</p>
+
+        <div id="admin-content">
             <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
-            <div style="font-size:13px; color:#666; margin-bottom:8px;">分类名称</div>
-            <input type="text" id="newName" class="input-style" placeholder="如：常用工具">
-            <div style="font-size:13px; color:#666; margin-bottom:8px;">链接列表 (每行一个网址)</div>
-            <textarea id="newUrls" class="input-style" placeholder="https://..." style="height:120px; resize:none;"></textarea>
-            <button class="btn-action" onclick="addNewCard()">确认创建并同步</button>
-            <button class="btn-action" style="background:#6c757d;" onclick="alert('审计功能开发中')">📊 查看审计日志</button>
-            <button class="btn-action" style="background:#f8f9fa; color:#333;" onclick="toggleAdminPanel(false)">关闭面板</button>
-            <p style="font-size:11px; color:#ccc; text-align:center; margin-top:20px;" onclick="logoutAdmin()">清除本地 Token 缓存</p>
+            <input type="text" id="newName" class="input-style" placeholder="分类名称">
+            <textarea id="newUrls" class="input-style" placeholder="输入网址，一行一个" style="height:150px; resize:none;"></textarea>
+            <button class="btn-action" onclick="saveToCloud()">同步创建到云端</button>
+            <button class="btn-action" style="background:#eee; color:#333; margin-top:10px;" onclick="location.reload()">退出并清除状态</button>
         </div>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" onclick="toggleAdminPanel(true)">⚙️ 打开管理面板</button>
+        <button class="btn-trigger" onclick="document.body.classList.add('admin-open')">⚙️ 打开面板</button>
     </div>
 
 <script>
-    const CONFIG = {
-        owner: 'Titeel', // 您的 GitHub 用户名
-        repo: 'my-nav',  // 您的仓库名
-        token: '',
+    const GITHUB = { owner: 'Titeel', repo: 'my-nav', file: 'data.json' };
+    let allData = {}, sha = "";
+
+    async function init() {
+        try {
+            const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}?t=${Date.now()}`);
+            const json = await res.json();
+            sha = json.sha;
+            allData = JSON.parse(decodeURIComponent(escape(atob(json.content))));
+            render('LU');
+            document.getElementById('main-body').style.display = 'block';
+        } catch (e) { alert("读取云端数据失败，请检查 data.json"); }
+    }
+
+    function render(role) {
+        const grid = document.getElementById('main-grid');
+        grid.innerHTML = (allData[role] || []).map(b => `
+            <div class="blogger-card">
+                <div class="name-row">${b.name}</div>
+                ${b.links.map(l => `<a href="${l.url}" target="_blank" class="link-item-vertical"><span class="link-label-text">${l.label}</span></a>`).join('')}
+            </div>`).join('');
+    }
+
+    // 核心逻辑：点击标题图标验证
+    function unlockAdmin() {
+        const pwd = prompt("请输入管理密码：");
+        if (pwd === (allData.config?.pwd_k || "K888")) {
+            let token = localStorage.getItem('gh_token') || prompt("请输入 GitHub Token (仅需输入一次):");
+            if (token) {
+                localStorage.setItem('gh_token', token);
+                document.getElementById('admin-content').style.display = 'block';
+                document.getElementById('lock-hint').innerText = "✅ 已解锁";
+                render('K'); // 自动切换到 K 分类
+            }
+        } else { alert("密码错误"); }
+    }
+
+    async function saveToCloud() {
+        const token = localStorage.getItem('gh_token');
+        const name = document.getElementById('newName').value;
+        const urls = document.getElementById('newUrls').value.split('\n').filter(u => u.trim());
+        
+        if (!name || !urls.length) return alert("请填写内容");
+        
+        allData.K.push({ name, links: urls.map(u => ({ label: "新链接", url: u.trim() })) });
+
+        const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}`, {
+            method: 'PUT',
+            headers: { 'Authorization': `token ${token}` },
+            body: JSON.stringify({
+                message: "update via web",
+                content: btoa(unescape(encodeURIComponent(JSON.stringify(allData, null, 2)))),
+                sha: sha
+            })
+        });
+
+        if (res.ok) { alert("同步成功！"); location.reload(); }
+        else { alert("同步失败，请检查 Token 权限"); }
+    }
+
+    init();
+</script>
+</body>
+</html>
