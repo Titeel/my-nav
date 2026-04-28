@@ -2,121 +2,170 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 云端同步版</title>
+    <title>聚合导航 - 深度编辑版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: none; }
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
         
-        #content-wrapper { flex: 1; padding: 40px; box-sizing: border-box; }
+        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
+        body.admin-open #content-wrapper { margin-right: 340px; }
+
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
         
-        .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; box-sizing: border-box; }
-        .name-row { font-weight: bold; font-size: 18px; border-bottom: 2px solid #f0f0f0; margin-bottom: 15px; padding-bottom: 10px; }
+        .blogger-card { 
+            width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
+        }
+
+        .name-row { font-size: 18px; font-weight: bold; color: #222; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         
-        .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; margin-bottom: 8px; }
+        .link-group { display: flex; flex-direction: column; gap: 10px; }
+        .link-item-vertical {
+            display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none;
+        }
         .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
         .link-label-text { font-size: 13px; font-weight: bold; color: #333; }
 
-        /* 侧边栏 */
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1000; padding: 30px 20px; box-sizing: border-box; }
+        /* 侧边栏管理面板 */
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; }
         body.admin-open #side-admin-panel { right: 0; }
         
-        /* 关键：点击标题图标验证 */
-        #admin-title { cursor: pointer; display: inline-flex; align-items: center; gap: 5px; user-select: none; }
-        #admin-content { display: none; margin-top: 20px; }
+        /* 交互核心：管理中心四个字图标 */
+        .admin-header-trigger { cursor: pointer; display: inline-block; user-select: none; }
+        .admin-header-trigger:hover { color: var(--primary-color); }
 
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; background: var(--primary-color); color: white; }
+        #admin-real-content { display: none; margin-top: 20px; }
+
+        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; background: var(--primary-color); color: white; }
         
-        #float-tools { position: fixed; bottom: 30px; right: 30px; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; }
+        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; }
     </style>
 </head>
-<body id="main-body">
+<body>
 
     <div id="content-wrapper">
-        <div id="main-grid"></div>
+        <div id="main-grid">
+            <div style="grid-column: 1/-1; text-align: center; color: #999; margin-top: 50px;">正在连接云端数据...</div>
+        </div>
     </div>
 
     <div id="side-admin-panel">
-        <h2 id="admin-title" onclick="unlockAdmin()">⚙️ 管理中心</h2>
-        <p id="lock-hint" style="font-size:12px; color:#999;">(点击上方文字验证权限)</p>
+        <h2 class="admin-header-trigger" onclick="handleAdminAuth()">⚙️ 管理中心</h2>
+        <p id="auth-status" style="font-size:12px; color:#999; margin-top:5px;">(点击上方文字图标解锁)</p>
 
-        <div id="admin-content">
+        <div id="admin-real-content">
             <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
-            <input type="text" id="newName" class="input-style" placeholder="分类名称">
-            <textarea id="newUrls" class="input-style" placeholder="输入网址，一行一个" style="height:150px; resize:none;"></textarea>
-            <button class="btn-action" onclick="saveToCloud()">同步创建到云端</button>
-            <button class="btn-action" style="background:#eee; color:#333; margin-top:10px;" onclick="location.reload()">退出并清除状态</button>
+            <input type="text" id="newName" class="input-style" placeholder="输入名称">
+            <textarea id="newUrls" class="input-style" placeholder="输入网址，自动识别" style="height:150px; resize:none;"></textarea>
+            <button class="btn-action" onclick="cloudSave()">确认创建并同步云端</button>
+            <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="togglePanel(false)">退出管理</button>
+            <p style="font-size:10px; color:#ddd; text-align:center; cursor:pointer;" onclick="localStorage.clear();location.reload();">重置本地缓存</p>
         </div>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" onclick="document.body.classList.add('admin-open')">⚙️ 打开面板</button>
+        <button class="btn-trigger" onclick="togglePanel(true)">⚙️ 管理控制台</button>
     </div>
 
 <script>
     const GITHUB = { owner: 'Titeel', repo: 'my-nav', file: 'data.json' };
-    let allData = {}, sha = "";
+    let allData = { LU: [], K: [], config: { pwd_k: "K888" } };
+    let currentSha = "";
 
-    async function init() {
+    // 1. 初始化数据获取
+    async function fetchData() {
+        const grid = document.getElementById('main-grid');
         try {
-            const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}?t=${Date.now()}`);
+            const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}?t=${Date.now()}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("仓库配置错误");
             const json = await res.json();
-            sha = json.sha;
+            currentSha = json.sha;
             allData = JSON.parse(decodeURIComponent(escape(atob(json.content))));
             render('LU');
-            document.getElementById('main-body').style.display = 'block';
-        } catch (e) { alert("读取云端数据失败，请检查 data.json"); }
+        } catch (e) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:red;">初始化失败：请确保仓库中有 data.json 且配置正确。</div>`;
+        }
     }
 
     function render(role) {
         const grid = document.getElementById('main-grid');
-        grid.innerHTML = (allData[role] || []).map(b => `
+        const data = allData[role] || [];
+        if (data.length === 0) {
+            grid.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#ccc; margin-top:50px;">暂无数据，请在管理中心添加。</div>`;
+            return;
+        }
+        grid.innerHTML = data.map(b => `
             <div class="blogger-card">
                 <div class="name-row">${b.name}</div>
-                ${b.links.map(l => `<a href="${l.url}" target="_blank" class="link-item-vertical"><span class="link-label-text">${l.label}</span></a>`).join('')}
+                <div class="link-group">
+                    ${b.links.map(l => `<a href="${l.url}" target="_blank" class="link-item-vertical"><span class="link-label-text">${l.label}</span></a>`).join('')}
+                </div>
             </div>`).join('');
     }
 
-    // 核心逻辑：点击标题图标验证
-    function unlockAdmin() {
-        const pwd = prompt("请输入管理密码：");
+    // 2. 核心交互：点击“管理中心”四个字触发验证
+    function handleAdminAuth() {
+        const pwd = prompt("请输入管理员密码：");
         if (pwd === (allData.config?.pwd_k || "K888")) {
-            let token = localStorage.getItem('gh_token') || prompt("请输入 GitHub Token (仅需输入一次):");
-            if (token) {
-                localStorage.setItem('gh_token', token);
-                document.getElementById('admin-content').style.display = 'block';
-                document.getElementById('lock-hint').innerText = "✅ 已解锁";
-                render('K'); // 自动切换到 K 分类
+            let token = localStorage.getItem('gh_token');
+            if (!token) {
+                token = prompt("检测到首次登录，请输入 GitHub Token:");
+                if (token) localStorage.setItem('gh_token', token);
             }
-        } else { alert("密码错误"); }
+            if (token) {
+                document.getElementById('admin-real-content').style.display = 'block';
+                document.getElementById('auth-status').innerText = "✅ 已解锁管理员权限";
+                render('K'); // 验证成功自动切到 K 数据
+            }
+        } else {
+            alert("密码错误");
+        }
     }
 
-    async function saveToCloud() {
+    function togglePanel(show) {
+        document.body.classList.toggle('admin-open', show);
+    }
+
+    // 3. 云端保存逻辑
+    async function cloudSave() {
         const token = localStorage.getItem('gh_token');
-        const name = document.getElementById('newName').value;
-        const urls = document.getElementById('newUrls').value.split('\n').filter(u => u.trim());
-        
-        if (!name || !urls.length) return alert("请填写内容");
-        
-        allData.K.push({ name, links: urls.map(u => ({ label: "新链接", url: u.trim() })) });
+        const name = document.getElementById('newName').value.trim();
+        const urls = document.getElementById('newUrls').value.trim().split('\n').filter(u => u.trim());
 
-        const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}`, {
-            method: 'PUT',
-            headers: { 'Authorization': `token ${token}` },
-            body: JSON.stringify({
-                message: "update via web",
-                content: btoa(unescape(encodeURIComponent(JSON.stringify(allData, null, 2)))),
-                sha: sha
-            })
-        });
+        if (!token) return alert("缺少 Token");
+        if (!name || urls.length === 0) return alert("请填写完整内容");
 
-        if (res.ok) { alert("同步成功！"); location.reload(); }
-        else { alert("同步失败，请检查 Token 权限"); }
+        // 构建新数据
+        const newCard = { name: name, links: urls.map(u => ({ label: "新链接", url: u.trim() })) };
+        allData.K.push(newCard);
+
+        try {
+            const res = await fetch(`https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.file}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: "Web update",
+                    content: btoa(unescape(encodeURIComponent(JSON.stringify(allData, null, 2)))),
+                    sha: currentSha
+                })
+            });
+
+            if (res.ok) {
+                alert("云端同步成功！页面将刷新。");
+                location.reload();
+            } else {
+                const err = await res.json();
+                alert("保存失败：" + err.message);
+            }
+        } catch (e) {
+            alert("网络请求失败");
+        }
     }
 
-    init();
+    window.onload = fetchData;
 </script>
 </body>
 </html>
