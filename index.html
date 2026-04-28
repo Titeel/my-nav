@@ -2,57 +2,61 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 完美交互版</title>
+    <title>聚合导航 - 完整功能修复版</title>
     <style>
-        :root { --primary: #007bff; --danger: #ff4d4f; --success: #28a745; --bg: #f4f7f9; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg); min-height: 100vh; display: flex; }
+        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
         
-        /* 内容区 */
-        #content-wrapper { flex: 1; padding: 40px; transition: 0.3s; box-sizing: border-box; }
+        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
         body.admin-open #content-wrapper { margin-right: 340px; }
+
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
+        
+        .blogger-card { 
+            width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
+        }
+        /* 管理模式下的视觉增强 */
+        .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
 
-        /* 卡片样式 */
-        .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; }
-        .edit-mode-active { border: 2px solid var(--primary); background: #fafafa; }
         .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; width: 100%; }
-
+        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 100%; }
+        
         .link-group { display: flex; flex-direction: column; gap: 10px; }
-        .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; text-decoration: none; transition: 0.2s; }
-        .link-item-vertical:hover { border-color: var(--primary); background: #fdfdfd; }
-        .link-label-text { font-size: 13px; font-weight: bold; color: #333; }
+        .link-item-vertical {
+            display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none;
+        }
+        .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
+        .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
         .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        /* 侧边栏 */
-        #side-admin { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1000; padding: 30px 20px; box-sizing: border-box; }
-        body.admin-open #side-admin { right: 0; }
+        /* 编辑状态 UI */
+        .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
+        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; background:transparent; }
+        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; background:transparent; }
         
-        .side-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .close-side { cursor: pointer; font-size: 24px; color: #ccc; transition: 0.2s; }
-        .close-side:hover { color: var(--danger); }
+        .remove-link-btn { position: absolute; top: 8px; right: 8px; color: #ccc; cursor: pointer; font-size: 16px; line-height: 1; }
+        .remove-link-btn:hover { color: var(--danger-color); }
 
-        /* 居中密码弹窗 */
-        #modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
-        #pwd-modal { background: #fff; padding: 30px; border-radius: 16px; width: 300px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
-        
-        /* 按钮与反馈 */
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; position: relative; }
-        .btn-primary { background: var(--primary); color: white; }
-        
-        .mini-feedback { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: #333; color: #fff; padding: 4px 12px; border-radius: 4px; font-size: 12px; opacity: 0; transition: 0.3s; pointer-events: none; }
-        .show-fb { opacity: 1; top: -40px; }
+        .add-item-btn { 
+            width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); 
+            background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold;
+        }
 
-        /* 访问记录展示层 */
-        #log-layer { display: none; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-top: 10px; font-size: 12px; position: relative; }
-
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
+        body.admin-open #side-admin-panel { right: 0; visibility: visible; }
         #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         
-        /* 编辑项样式 */
-        .edit-unit { position: relative; border: 1px solid #ddd; padding: 8px; border-radius: 6px; margin-bottom: 5px; }
-        .del-item { position: absolute; top: 5px; right: 5px; cursor: pointer; color: #ccc; }
+        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .action-btns { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
+        .btn-base { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .btn-save { background: var(--success-color); color: white; }
+        .btn-undo { background: #6c757d; color: white; }
+        .btn-del-init { background: #f5f5f5; color: #999; }
+        .confirm-zone { display: none; gap: 8px; }
+        .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
     </style>
 </head>
 <body>
@@ -61,129 +65,158 @@
         <div id="main-grid"></div>
     </div>
 
-    <div id="side-admin">
-        <div class="side-header">
-            <h2 style="margin:0; cursor:pointer;" onclick="openPwdModal()">⚙️ 管理中心</h2>
-            <span class="close-side" onclick="toggleSide(false)">×</span>
-        </div>
-        <p id="lock-hint" style="font-size:12px; color:#999;">基础功能已开，点击上方文字验证特权</p>
-
-        <div style="margin-top:20px;">
-            <input type="text" id="newName" class="input-style" placeholder="卡片名称">
-            <textarea id="newUrls" class="input-style" placeholder="网址(一行一个)" style="height:120px;"></textarea>
-            <button class="btn-action btn-primary" onclick="addCard(this)">
-                确认创建卡片
-                <span class="mini-feedback">已创建</span>
-            </button>
-        </div>
-
-        <div id="privilege-zone" style="display:none; margin-top:20px; border-top:1px dashed #eee; padding-top:20px;">
-            <button class="btn-action" style="background:#6c757d; color:white;" onclick="toggleLogs()">
-                📊 查看访问记录
-            </button>
-            <div id="log-layer">
-                <span style="position:absolute; right:8px; top:5px; cursor:pointer;" onclick="toggleLogs()">×</span>
-                <strong>最近访问：</strong><br>
-                - 湖北省武汉市 10:24<br>
-                - 广东省深圳市 09:15
-            </div>
-            <button class="btn-action" style="background:#f39c12; color:white;">🔑 修改管理密码</button>
-        </div>
-    </div>
-
-    <div id="modal-overlay">
-        <div id="pwd-modal">
-            <h3 style="margin-top:0">管理员验证</h3>
-            <p style="font-size:14px; color:#666">请输入密码解锁高级功能</p>
-            <input type="password" id="adminPwd" class="input-style" placeholder="请输入密码" autofocus>
-            <button class="btn-action btn-primary" onclick="handleVerify()">确认</button>
-            <button class="btn-action" style="background:#eee" onclick="closePwdModal()">取消</button>
-        </div>
+    <div id="side-admin-panel">
+        <h2 style="margin-top:0">管理中心</h2>
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
+        <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
+        <input type="text" id="newName" class="input-style" placeholder="输入名称">
+        <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（可批量）</div>
+        <textarea id="newUrls" class="input-style" placeholder="输入网址，自动识别（一行一个或逗号隔开）" style="height:150px; resize:none;"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">确认创建新卡片</button>
+        <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="toggleAdmin(false)">退出管理模式</button>
+        <div id="main-feedback" class="feedback-text"></div>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" onclick="toggleSide(true)">⚙️ 管理控制台</button>
+        <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 进入管理中心</button>
     </div>
 
 <script>
     let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
-    let isPrivileged = false;
+    let isAdminMode = false;
+
+    // 核心修复：处理 URL 防止 Github 前缀错误
+    function formatUrl(url) {
+        url = url.trim();
+        if (!url) return "";
+        if (!/^https?:\/\//i.test(url)) {
+            return 'https://' + url;
+        }
+        return url;
+    }
+
+    function getAutoLabel(url) {
+        if (url.includes('weibo.com')) return "微博主页";
+        if (url.includes('douyin.com')) return "抖音账号";
+        if (url.includes('bilibili.com')) return "B站账号";
+        return "新链接";
+    }
 
     function render() {
         const grid = document.getElementById('main-grid');
         grid.innerHTML = bloggers.map((b, i) => `
-            <div class="blogger-card ${isPrivileged ? 'edit-mode-active' : ''}">
+            <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isPrivileged ? 'readonly' : ''}>
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value; saveToLocal()">
                 </div>
-                <div class="link-group" id="group-${i}">
-                    ${b.links.map((l, j) => isPrivileged ? 
-                        `<div class="edit-unit">
-                            <span class="del-item" onclick="this.parentElement.remove()">×</span>
-                            <input class="blogger-name-input" style="font-size:13px" value="${l.label}">
-                            <input class="blogger-name-input" style="font-size:11px; color:#999" value="${l.url}">
-                         </div>` : 
-                        `<a href="${l.url}" target="_blank" class="link-item-vertical">
-                            <span class="link-label-text">${l.label}</span>
-                            <span class="link-url-text">${l.url}</span>
-                         </a>`
-                    ).join('')}
+                <div class="link-group" id="link-group-${i}">
+                    ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
                 </div>
-                ${isPrivileged ? `
-                    <button class="btn-action" style="margin-top:10px; background:var(--success); color:white" onclick="saveCard(${i}, this)">
-                        保存修改 <span class="mini-feedback">保存成功</span>
-                    </button>
-                    <button class="btn-action" style="background:#f5f5f5; color:#999" onclick="removeCard(${i})">删除卡片</button>
-                ` : ''}
+                ${isAdminMode ? `
+                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
+                <div class="action-btns">
+                    <div id="normalBtns-${i}" style="display:flex; gap:8px">
+                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
+                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${i})">保存当前卡片</button>
+                    </div>
+                    <div id="confirmZone-${i}" class="confirm-zone">
+                        <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
+                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除</button>
+                    </div>
+                    <div id="card-fb-${i}" class="feedback-text"></div>
+                </div>` : ''}
             </div>`).join('');
     }
 
-    // 弹窗逻辑
-    function openPwdModal() { document.getElementById('modal-overlay').style.display = 'flex'; }
-    function closePwdModal() { document.getElementById('modal-overlay').style.display = 'none'; }
-    
-    function handleVerify() {
-        const p = document.getElementById('adminPwd').value;
-        if (p === "K888") {
-            isPrivileged = true;
-            document.getElementById('privilege-zone').style.display = 'block';
-            document.getElementById('lock-hint').innerHTML = "<span style='color:green'>✅ 已解锁特权</span>";
-            closePwdModal();
-            render();
-        } else { alert("密码错误"); }
+    function renderItem(link, cardIdx, linkIdx) {
+        if (!isAdminMode) {
+            return `
+            <a href="${formatUrl(link.url)}" target="_blank" class="link-item-vertical">
+                <span class="link-label-text">${link.label}</span>
+                <span class="link-url-text">${link.url}</span>
+            </a>`;
+        }
+        return `
+        <div class="edit-unit">
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" value="${link.label}" placeholder="链接标题">
+            <input type="text" class="url-input" value="${link.url}" placeholder="网址">
+        </div>`;
     }
 
-    // 交互辅助
-    function toggleSide(s) { document.body.classList.toggle('admin-open', s); }
-    function toggleLogs() {
-        const layer = document.getElementById('log-layer');
-        layer.style.display = layer.style.display === 'block' ? 'none' : 'block';
+    function addNewLinkLine(cardIdx) {
+        const group = document.getElementById(`link-group-${cardIdx}`);
+        const div = document.createElement('div');
+        div.className = 'edit-unit';
+        div.innerHTML = `
+            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" placeholder="链接标题">
+            <input type="text" class="url-input" placeholder="粘贴网址">
+        `;
+        group.appendChild(div);
     }
 
-    function flash(btn) {
-        const fb = btn.querySelector('.mini-feedback');
-        fb.classList.add('show-fb');
-        setTimeout(() => fb.classList.remove('show-fb'), 2000);
+    function toggleAdmin(show) {
+        isAdminMode = show;
+        document.body.classList.toggle('admin-open', show);
+        render();
     }
 
-    // 业务功能
-    function addCard(btn) {
-        const n = document.getElementById('newName').value;
-        const u = document.getElementById('newUrls').value.split('\n').filter(x => x.trim());
-        if(!n) return;
-        bloggers.push({ name: n, links: u.map(url => ({ label: "新链接", url })) });
-        save();
-        flash(btn);
+    function addBlogger() {
+        const name = document.getElementById('newName').value.trim();
+        const rawText = document.getElementById('newUrls').value.trim();
+        if (!name) return alert("请输入卡片名称");
+        
+        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
+        let validLinks = rawItems.map(url => ({ 
+            url: url.trim(), 
+            label: getAutoLabel(url) 
+        }));
+
+        bloggers.push({ name, links: validLinks });
+        saveAndRender();
+        document.getElementById('newName').value = '';
+        document.getElementById('newUrls').value = '';
     }
 
-    function saveCard(idx, btn) {
-        // 简化版保存逻辑
-        flash(btn);
-        setTimeout(save, 500);
+    function saveChanges(index) {
+        const card = document.querySelectorAll('.blogger-card')[index];
+        const newName = card.querySelector('.blogger-name-input').value.trim();
+        const units = card.querySelectorAll('.edit-unit');
+        let newLinks = [];
+        units.forEach(u => {
+            const l = u.querySelector('.tag-name-input').value.trim();
+            const url = u.querySelector('.url-input').value.trim();
+            if(url) newLinks.push({ url, label: l || "新链接" });
+        });
+        bloggers[index] = { name: newName, links: newLinks };
+        saveAndRender();
+        flashFeedback(`card-fb-${index}`, '已保存成功');
     }
 
-    function removeCard(i) { bloggers.splice(i, 1); save(); }
-    function save() { localStorage.setItem('verticalBloggers', JSON.stringify(bloggers)); render(); }
+    function removeBlogger(i) {
+        bloggers.splice(i, 1);
+        saveAndRender();
+    }
+
+    function saveToLocal() {
+        localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
+    }
+
+    function saveAndRender() {
+        saveToLocal();
+        render();
+    }
+
+    function showConfirm(index, isDeleting) {
+        document.getElementById(`normalBtns-${index}`).style.display = isDeleting ? 'none' : 'flex';
+        document.getElementById(`confirmZone-${index}`).style.display = isDeleting ? 'flex' : 'none';
+    }
+
+    function flashFeedback(id, text) {
+        const el = document.getElementById(id);
+        if(el) { el.innerText = text; setTimeout(() => el.innerText = "", 2000); }
+    }
 
     window.onload = render;
 </script>
