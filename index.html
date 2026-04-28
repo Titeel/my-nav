@@ -2,32 +2,32 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - GitHub 同步隐私版</title>
+    <title>聚合导航 - GitHub 增强同步版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; }
         #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
         body.admin-open #content-wrapper { margin-right: 340px; }
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
-        .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; }
+        .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; align-self: start; }
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
         .name-row { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         .blogger-name-input { border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; width: 100%; }
-        .link-group { display: flex; flex-direction: column; gap: 10px; }
+        .link-group { display: flex; flex-direction: column; gap: 10px; min-height: 20px; }
         .link-item-vertical { display: flex; flex-direction: column; padding: 12px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; transition: 0.2s; }
         .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
         .link-label-text { font-size: 14px; font-weight: bold; color: #333; }
         .edit-unit { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; border-bottom: 1px dashed #eee; margin-bottom: 5px; }
-        .url-input { border: none; width: 100%; font-size: 11px; color: var(--primary-color); outline: none; }
+        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; border-bottom: 1px dashed #eee; margin-bottom: 5px; background: transparent; }
+        .url-input { border: none; width: 100%; font-size: 11px; color: var(--primary-color); outline: none; background: transparent; }
         #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
         #log-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
         #log-window { background: #fff; width: 550px; height: 600px; border-radius: 16px; padding: 25px; display: flex; flex-direction: column; }
-        #log-list { flex: 1; overflow-y: auto; background: #1e1e1e; color: #adadad; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 12px; line-height: 1.6; }
-        .log-trigger-link { position: absolute; bottom: 15px; right: 20px; font-size: 11px; color: #f9f9f9; cursor: pointer; }
+        #log-list { flex: 1; overflow-y: auto; background: #1e1e1e; color: #adadad; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 12px; }
+        .log-trigger-link { position: absolute; bottom: 15px; right: 20px; font-size: 11px; color: #f0f0f0; cursor: pointer; }
         .btn-trigger { position: fixed; bottom: 30px; right: 30px; background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; z-index: 999; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .btn-action { width: 100%; padding: 10px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 8px; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -36,22 +36,25 @@
 
     <div id="side-admin-panel">
         <h2 style="margin-top:0">管理中心</h2>
-        <input type="text" id="newName" style="width:100%; padding:10px; margin-bottom:10px" placeholder="卡片名称">
-        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建新卡片</button>
+        <div style="margin-bottom:20px">
+            <input type="text" id="newName" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px" placeholder="新卡片标题 (如: 常用工具)">
+            <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">确认新建卡片</button>
+        </div>
+        <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
         <button class="btn-action" style="background:#f5f5f5;" onclick="toggleAdmin(false)">退出编辑模式</button>
-        <p id="sync-status" style="font-size:12px; color:var(--success-color)">● 准备就绪</p>
+        <p id="sync-status" style="font-size:12px; color:var(--success-color)">● 云端连接正常</p>
         <span class="log-trigger-link" onclick="showLogWindow()">系统诊断</span>
     </div>
 
     <div id="log-overlay" onclick="this.style.display='none'">
         <div id="log-window" onclick="event.stopPropagation()">
-            <h3>操作记录 (由 GitHub 永久保存)</h3>
+            <h3>操作记录 (不可删除)</h3>
             <div id="log-list">读取日志中...</div>
             <button class="btn-action" style="margin-top:15px" onclick="document.getElementById('log-overlay').style.display='none'">关闭</button>
         </div>
     </div>
 
-    <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 进入管理模式</button>
+    <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 管理模式</button>
 
 <script>
     // 【配置区】
@@ -63,57 +66,40 @@
     let isAdminMode = false;
     let userIP = "获取中...";
 
-    // 自动获取IP
     fetch('https://api.ipify.org?format=json').then(r => r.json()).then(d => userIP = d.ip);
 
-    // 云端同步逻辑
     async function syncCloud(actionType, detail) {
         document.getElementById('sync-status').innerText = "● 正在同步...";
-        
-        // 记录新日志
         if(actionType) {
-            const newLog = `[${new Date().toLocaleString()}] ${userIP} ${actionType}: ${detail}`;
-            systemLogs.unshift(newLog);
+            systemLogs.unshift(`[${new Date().toLocaleString()}] ${userIP} ${actionType}: ${detail}`);
             if(systemLogs.length > 50) systemLogs.pop();
         }
-
-        // 隐私混淆：存储前对URL进行Base64编码
         const exportData = bloggers.map(b => ({
             name: b.name,
             links: b.links.map(l => ({ label: l.label, url: btoa(l.url) }))
         }));
-
-        const content = JSON.stringify({ data: exportData, logs: systemLogs });
-        
         try {
             await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `token ${GH_TOKEN}` },
-                body: JSON.stringify({ files: { "nav_cloud_db.json": { content: content } } })
+                body: JSON.stringify({ files: { "nav_cloud_db.json": { content: JSON.stringify({ data: exportData, logs: systemLogs }) } } })
             });
             document.getElementById('sync-status').innerText = "● 云端已同步";
-        } catch(e) {
-            alert("同步失败，请检查 Token 和 ID");
-        }
+        } catch(e) { alert("同步失败"); }
     }
 
     async function loadCloud() {
         try {
-            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                headers: { 'Authorization': `token ${GH_TOKEN}` }
-            });
+            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, { headers: { 'Authorization': `token ${GH_TOKEN}` } });
             const json = await res.json();
             const db = JSON.parse(json.files["nav_cloud_db.json"].content);
-            
             systemLogs = db.logs || [];
             bloggers = db.data.map(b => ({
                 name: b.name,
                 links: b.links.map(l => ({ label: l.label, url: atob(l.url) }))
             }));
             render();
-        } catch(e) {
-            document.getElementById('main-grid').innerText = "初次运行或连接错误，请点击管理模式创建内容。";
-        }
+        } catch(e) { document.getElementById('main-grid').innerText = "请进入管理模式创建首个卡片"; }
     }
 
     function render() {
@@ -124,59 +110,48 @@
                     <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value">
                 </div>
                 <div class="link-group" id="link-group-${i}">
-                    ${b.links.map(l => isAdminMode ? `
+                    ${b.links.map((l, j) => isAdminMode ? `
                         <div class="edit-unit">
-                            <span style="position:absolute;right:5px;top:2px;cursor:pointer;color:#ccc" onclick="this.parentElement.remove()">×</span>
-                            <input type="text" class="tag-name-input" value="${l.label}">
-                            <input type="text" class="url-input" value="${l.url}">
+                            <span style="position:absolute;right:5px;top:2px;cursor:pointer;color:#ccc" onclick="removeLine(${i}, ${j})">×</span>
+                            <input type="text" class="tag-name-input" value="${l.label}" onchange="bloggers[${i}].links[${j}].label=this.value">
+                            <input type="text" class="url-input" value="${l.url}" onchange="bloggers[${i}].links[${j}].url=this.value">
                         </div>` : `
                         <a href="${l.url}" target="_blank" class="link-item-vertical" onclick="syncCloud('访问', '${l.label}')">
                             <span class="link-label-text">${l.label}</span>
                         </a>`).join('')}
                 </div>
                 ${isAdminMode ? `
-                    <button class="btn-action" style="background:#eee; margin-top:10px" onclick="addNewLine(${i})">+ 增加</button>
-                    <button class="btn-action" style="background:var(--success-color);color:white;" onclick="saveCard(${i})">同步云端</button>
-                    <button class="btn-action" style="background:var(--danger-color);color:white;" onclick="deleteCard(${i})">删除卡片</button>
+                    <button class="btn-action" style="background:#eee; margin-top:10px" onclick="addNewLine(${i})">+ 增加链接行</button>
+                    <button class="btn-action" style="background:var(--success-color);color:white;" onclick="syncCloud('保存', '${b.name}')">同步此卡片到云端</button>
+                    <button class="btn-action" style="background:#ffeef0;color:var(--danger-color);border:1px solid #ffd1d6" onclick="deleteCard(${i})">删除整个卡片</button>
                 ` : ''}
             </div>`).join('');
     }
 
-    function saveCard(idx) {
-        const card = document.querySelectorAll('.blogger-card')[idx];
-        const units = card.querySelectorAll('.edit-unit');
-        let links = [];
-        units.forEach(u => {
-            const label = u.querySelector('.tag-name-input').value;
-            const url = u.querySelector('.url-input').value;
-            if(url) links.push({ label, url });
-        });
-        bloggers[idx].links = links;
-        syncCloud('修改', bloggers[idx].name);
+    function addNewLine(idx) {
+        bloggers[idx].links.push({ label: "", url: "" });
         render();
     }
 
-    function addNewLine(idx) {
-        const div = document.createElement('div');
-        div.className = 'edit-unit';
-        div.innerHTML = `<span style="position:absolute;right:5px;top:2px;cursor:pointer;color:#ccc" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="名称"><input type="text" class="url-input" placeholder="网址">`;
-        document.getElementById(`link-group-${idx}`).appendChild(div);
+    function removeLine(bIdx, lIdx) {
+        bloggers[bIdx].links.splice(lIdx, 1);
+        render();
     }
 
     function addBlogger() {
         const name = document.getElementById('newName').value;
-        if(!name) return;
-        bloggers.push({ name, links: [] });
-        syncCloud('新增', name);
+        if(!name) { alert("请输入卡片名称"); return; }
+        bloggers.push({ name: name, links: [] });
+        syncCloud('新建', name);
         document.getElementById('newName').value = "";
         render();
     }
 
     function deleteCard(i) {
-        if(confirm("删除后云端也将同步删除，确定吗？")) {
-            syncCloud('删除', bloggers[i].name);
+        if(confirm("确定删除整个卡片吗？此操作不可逆。")) {
+            const name = bloggers[i].name;
             bloggers.splice(i, 1);
+            syncCloud('删除卡片', name);
             render();
         }
     }
