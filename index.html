@@ -2,286 +2,166 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 日志增强版</title>
+    <title>聚合导航 - 云端同步隐私版</title>
+    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.12.0/dist/av-min.js"></script>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
-        
         #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
         body.admin-open #content-wrapper { margin-right: 340px; }
-
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
-        
-        .blogger-card { 
-            width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
-        }
+        .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; }
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
-
-        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 100%; }
-        
+        .name-row { display: flex; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; width: 100%; }
         .link-group { display: flex; flex-direction: column; gap: 10px; }
-        .link-item-vertical {
-            display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none;
-        }
+        .link-item-vertical { display: flex; flex-direction: column; padding: 12px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; transition: 0.2s; }
         .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
-        .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
-        .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
-        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; background:transparent; }
-        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; background:transparent; }
-        
-        .remove-link-btn { position: absolute; top: 8px; right: 8px; color: #ccc; cursor: pointer; font-size: 16px; line-height: 1; }
-        .remove-link-btn:hover { color: var(--danger-color); }
-
-        .add-item-btn { 
-            width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); 
-            background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold;
-        }
-
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; display: flex; flex-direction: column; }
+        .link-label-text { font-size: 14px; font-weight: bold; color: #333; }
+        .edit-unit { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; border-bottom: 1px dashed #eee; margin-bottom: 5px; }
+        .url-input { border: none; width: 100%; font-size: 11px; color: var(--primary-color); outline: none; }
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
-        
-        #log-container { margin-top: 20px; flex: 1; overflow-y: auto; border-top: 1px solid #eee; padding-top: 15px; }
-        .log-item { font-size: 11px; color: #666; margin-bottom: 6px; padding: 4px; background: #f9f9f9; border-radius: 4px; }
-        .log-tag { font-weight: bold; color: var(--primary-color); margin-right: 4px; }
-
-        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+        #log-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        #log-window { background: #fff; width: 550px; height: 600px; border-radius: 16px; padding: 25px; display: flex; flex-direction: column; }
+        #log-list { flex: 1; overflow-y: auto; background: #1e1e1e; color: #adadad; border-radius: 8px; padding: 15px; font-family: monospace; font-size: 12px; }
+        .log-trigger-link { position: absolute; bottom: 15px; right: 20px; font-size: 11px; color: #f0f0f0; cursor: pointer; }
+        .btn-trigger { position: fixed; bottom: 30px; right: 30px; background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; z-index: 999; }
         .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .action-btns { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
-        .btn-base { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; }
-        .btn-save { background: var(--success-color); color: white; }
-        .btn-undo { background: #6c757d; color: white; }
-        .btn-del-init { background: #f5f5f5; color: #999; }
-        .confirm-zone { display: none; gap: 8px; }
-        .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
     </style>
 </head>
 <body>
 
-    <div id="content-wrapper">
-        <div id="main-grid"></div>
-    </div>
+    <div id="content-wrapper"><div id="main-grid">正在从云端同步数据...</div></div>
 
     <div id="side-admin-panel">
         <h2 style="margin-top:0">管理中心</h2>
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
-        <input type="text" id="newName" class="input-style" placeholder="输入名称">
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（可批量）</div>
-        <textarea id="newUrls" class="input-style" placeholder="一行一个" style="height:120px; resize:none;"></textarea>
+        <input type="text" id="newName" style="width:100%; padding:10px; margin-bottom:10px" placeholder="卡片名称">
         <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建新卡片</button>
-        <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="toggleAdmin(false)">退出管理模式</button>
-        
-        <div id="log-container">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px">
-                <span style="font-size:14px; font-weight:bold;">系统日志 (IP与操作)</span>
-                <span style="font-size:10px; color:#999; cursor:pointer" onclick="clearLogs()">清空日志</span>
-            </div>
-            <div id="log-list"></div>
-        </div>
-        <div id="main-feedback" class="feedback-text"></div>
+        <button class="btn-action" style="background:#f5f5f5;" onclick="toggleAdmin(false)">退出编辑</button>
+        <p style="font-size:12px; color:var(--success-color)">● 云端同步已开启</p>
+        <span class="log-trigger-link" onclick="showLogWindow()">系统诊断</span>
     </div>
 
-    <div id="float-tools">
-        <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 进入管理中心</button>
+    <div id="log-overlay">
+        <div id="log-window">
+            <h3>云端操作日志 (永久保留)</h3>
+            <div id="log-list">读取日志中...</div>
+            <button class="btn-action" style="margin-top:15px" onclick="document.getElementById('log-overlay').style.display='none'">关闭</button>
+        </div>
     </div>
+
+    <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 管理模式</button>
 
 <script>
-    let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
-    let systemLogs = JSON.parse(localStorage.getItem('navSystemLogs')) || [];
+    // 【配置区】请在此处填入你的 LeanCloud 信息
+    AV.init({
+        appId: "你的AppID",
+        appKey: "你的AppKey",
+        serverURL: "https://你的绑定的域名或LeanCloud分配的域名"
+    });
+
+    let bloggers = [];
     let isAdminMode = false;
-    let userIP = "获取中...";
+    const NavData = AV.Object.extend('NavData');
+    const SystemLog = AV.Object.extend('SystemLog');
 
-    // 获取用户IP
-    fetch('https://api.ipify.org?format=json')
-        .then(res => res.json())
-        .then(data => { userIP = data.ip; })
-        .catch(() => { userIP = "未知IP"; });
-
-    function formatUrl(url) {
-        url = url.trim();
-        if (!url) return "";
-        return /^https?:\/\//i.test(url) ? url : 'https://' + url;
+    // 云端数据加载
+    async function loadData() {
+        const query = new AV.Query('NavData');
+        try {
+            const results = await query.find();
+            bloggers = results.map(item => ({
+                id: item.id,
+                name: item.get('name'),
+                links: item.get('links').map(l => ({
+                    label: l.label,
+                    url: atob(l.url) // 解码隐私网址
+                }))
+            }));
+            render();
+        } catch(e) { document.getElementById('main-grid').innerText = "云端连接失败，请检查配置"; }
     }
 
-    // 记录日志功能
-    function addLog(type, content) {
-        const now = new Date();
-        const timeStr = `${now.getMonth()+1}/${now.getDate()} ${now.getHours()}:${now.getMinutes().toString().padStart(2,'0')}`;
-        const logEntry = {
-            time: timeStr,
-            ip: userIP,
-            type: type,
-            content: content
-        };
-        systemLogs.unshift(logEntry);
-        if(systemLogs.length > 50) systemLogs.pop(); // 最多保留50条
-        localStorage.setItem('navSystemLogs', JSON.stringify(systemLogs));
-        renderLogs();
+    // 云端日志记录
+    async function addLog(type, msg) {
+        const log = new SystemLog();
+        const ipRes = await fetch('https://api.ipify.org?format=json').then(r => r.json());
+        log.set('type', type);
+        log.set('msg', msg);
+        log.set('ip', ipRes.ip);
+        await log.save();
     }
 
-    function renderLogs() {
-        const logList = document.getElementById('log-list');
-        logList.innerHTML = systemLogs.map(log => `
-            <div class="log-item">
-                <span style="color:#999">[${log.time}]</span> 
-                <span style="color:#666">${log.ip}</span> 
-                <span class="log-tag">${log.type}</span> 
-                ${log.content}
-            </div>
-        `).join('');
-    }
-
-    function clearLogs() {
-        systemLogs = [];
-        localStorage.removeItem('navSystemLogs');
-        renderLogs();
-    }
-
-    function getAutoLabel(url) {
-        if (url.includes('weibo.com')) return "微博主页";
-        if (url.includes('douyin.com')) return "抖音账号";
-        if (url.includes('bilibili.com')) return "B站账号";
-        return "新链接";
-    }
-
+    // 渲染 UI
     function render() {
         const grid = document.getElementById('main-grid');
         grid.innerHTML = bloggers.map((b, i) => `
             <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="updateBloggerName(${i}, this.value)">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value">
                 </div>
                 <div class="link-group" id="link-group-${i}">
-                    ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
+                    ${b.links.map(l => isAdminMode ? `
+                        <div class="edit-unit">
+                            <input type="text" class="tag-name-input" value="${l.label}">
+                            <input type="text" class="url-input" value="${l.url}">
+                        </div>` : `
+                        <a href="${l.url}" target="_blank" class="link-item-vertical" onclick="addLog('访问', '${l.label}')">
+                            <span class="link-label-text">${l.label}</span>
+                        </a>`).join('')}
                 </div>
-                ${isAdminMode ? `
-                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 增加链接</button>
-                <div class="action-btns">
-                    <div id="normalBtns-${i}" style="display:flex; gap:8px">
-                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
-                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${i})">保存卡片</button>
-                    </div>
-                    <div id="confirmZone-${i}" class="confirm-zone">
-                        <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
-                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除</button>
-                    </div>
-                    <div id="card-fb-${i}" class="feedback-text"></div>
-                </div>` : ''}
+                ${isAdminMode ? `<button class="btn-action" style="background:var(--success-color);color:white;margin-top:10px" onclick="saveToCloud(${i})">同步到云端</button>` : ''}
             </div>`).join('');
     }
 
-    function renderItem(link, cardIdx, linkIdx) {
-        if (!isAdminMode) {
-            return `
-            <a href="${formatUrl(link.url)}" target="_blank" class="link-item-vertical" onclick="addLog('访问', '${link.label}')">
-                <span class="link-label-text">${link.label}</span>
-                <span class="link-url-text">${link.url}</span>
-            </a>`;
-        }
-        return `
-        <div class="edit-unit">
-            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" value="${link.label}" placeholder="标题">
-            <input type="text" class="url-input" value="${link.url}" placeholder="网址">
-        </div>`;
-    }
-
-    function updateBloggerName(i, val) {
-        const oldName = bloggers[i].name;
-        bloggers[i].name = val;
-        saveToLocal();
-        addLog('重命名', `从 ${oldName} 改为 ${val}`);
-    }
-
-    function addNewLinkLine(cardIdx) {
-        const group = document.getElementById(`link-group-${cardIdx}`);
-        const div = document.createElement('div');
-        div.className = 'edit-unit';
-        div.innerHTML = `
-            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="链接标题">
-            <input type="text" class="url-input" placeholder="粘贴网址">
-        `;
-        group.appendChild(div);
-    }
-
-    function toggleAdmin(show) {
-        isAdminMode = show;
-        document.body.classList.toggle('admin-open', show);
-        render();
-        if(show) renderLogs();
-    }
-
-    function addBlogger() {
-        const name = document.getElementById('newName').value.trim();
-        const rawText = document.getElementById('newUrls').value.trim();
-        if (!name) return;
-        
-        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
-        let validLinks = rawItems.map(url => ({ 
-            url: url.trim(), 
-            label: getAutoLabel(url) 
-        }));
-
-        bloggers.push({ name, links: validLinks });
-        saveAndRender();
-        addLog('新增', `创建卡片: ${name}`);
-        document.getElementById('newName').value = '';
-        document.getElementById('newUrls').value = '';
-    }
-
-    function saveChanges(index) {
-        const card = document.querySelectorAll('.blogger-card')[index];
-        const newName = card.querySelector('.blogger-name-input').value.trim();
+    // 同步到云端
+    async function saveToCloud(idx) {
+        const card = document.querySelectorAll('.blogger-card')[idx];
+        const name = card.querySelector('.blogger-name-input').value;
         const units = card.querySelectorAll('.edit-unit');
-        let newLinks = [];
+        let links = [];
         units.forEach(u => {
-            const l = u.querySelector('.tag-name-input').value.trim();
-            const url = u.querySelector('.url-input').value.trim();
-            if(url) newLinks.push({ url, label: l || "新链接" });
+            const label = u.querySelector('.tag-name-input').value;
+            const url = u.querySelector('.url-input').value;
+            if(url) links.push({ label, url: btoa(url) }); // 隐私网址混淆加密
         });
-        bloggers[index] = { name: newName, links: newLinks };
-        saveAndRender();
-        addLog('修改', `更新了卡片: ${newName}`);
-        flashFeedback(`card-fb-${index}`, '已保存');
+
+        const obj = bloggers[idx].id ? AV.Object.createWithoutData('NavData', bloggers[idx].id) : new NavData();
+        obj.set('name', name);
+        obj.set('links', links);
+        await obj.save();
+        addLog('云同步', `更新了卡片: ${name}`);
+        alert("云端数据同步成功！");
+        loadData();
     }
 
-    function removeBlogger(i) {
-        const name = bloggers[i].name;
-        bloggers.splice(i, 1);
-        saveAndRender();
-        addLog('删除', `删除了卡片: ${name}`);
+    async function addBlogger() {
+        const name = document.getElementById('newName').value;
+        if(!name) return;
+        const obj = new NavData();
+        obj.set('name', name);
+        obj.set('links', []);
+        await obj.save();
+        addLog('新增', `创建新卡片: ${name}`);
+        document.getElementById('newName').value = "";
+        loadData();
     }
 
-    function saveToLocal() {
-        localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
+    async function showLogWindow() {
+        document.getElementById('log-overlay').style.display = 'flex';
+        const query = new AV.Query('SystemLog');
+        query.descending('createdAt');
+        query.limit(20);
+        const logs = await query.find();
+        document.getElementById('log-list').innerHTML = logs.map(l => `
+            <div>[${l.createdAt.toLocaleString()}] ${l.get('ip')} <span style="color:#569cd6">${l.get('type')}</span>: ${l.get('msg')}</div>
+        `).join('');
     }
 
-    function saveAndRender() {
-        saveToLocal();
-        render();
-    }
-
-    function showConfirm(index, isDeleting) {
-        document.getElementById(`normalBtns-${index}`).style.display = isDeleting ? 'none' : 'flex';
-        document.getElementById(`confirmZone-${index}`).style.display = isDeleting ? 'flex' : 'none';
-    }
-
-    function flashFeedback(id, text) {
-        const el = document.getElementById(id);
-        if(el) { el.innerText = text; setTimeout(() => el.innerText = "", 2000); }
-    }
-
-    window.onload = () => {
-        render();
-        renderLogs();
-    };
+    function toggleAdmin(s) { isAdminMode = s; document.body.classList.toggle('admin-open', s); render(); }
+    window.onload = loadData;
 </script>
 </body>
 </html>
