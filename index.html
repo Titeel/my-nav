@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 完整功能修复版</title>
+    <title>聚合导航 - 完整功能版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; overflow-x: hidden; display: flex; }
@@ -16,10 +16,9 @@
             width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
         }
-        /* 管理模式下的视觉增强 */
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
 
-        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
+        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; position: relative; }
         .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 100%; }
         
         .link-group { display: flex; flex-direction: column; gap: 10px; }
@@ -29,6 +28,9 @@
         .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
         .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
         .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* IP 显示样式 */
+        .ip-info { font-size: 10px; color: #ccc; margin-top: 4px; }
 
         /* 编辑状态 UI */
         .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
@@ -58,7 +60,11 @@
         .confirm-zone { display: none; gap: 8px; }
         .feedback-text { text-align: center; color: var(--success-color); font-size: 13px; margin-top: 10px; min-height: 18px; }
 
-        /* 密码弹窗样式 */
+        /* 隐藏的修改密码图标 */
+        #change-pwd-btn { display: none; position: absolute; right: 20px; top: 35px; cursor: pointer; color: #eee; font-size: 12px; }
+        #change-pwd-btn:hover { color: #ccc; }
+
+        /* 验证弹窗 */
         #pwd-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
         #pwd-box { background: #fff; padding: 30px; border-radius: 16px; width: 300px; text-align: center; }
     </style>
@@ -70,24 +76,25 @@
     </div>
 
     <div id="side-admin-panel">
-        <h2 style="margin-top:0; cursor: pointer;" onclick="checkPwdStatus()">管理中心</h2>
-        <p id="lock-hint" style="font-size: 12px; color: #999; margin-top: -10px;">点击标题验证特权</p>
+        <h2 style="margin-top:0; cursor: default; user-select: none;" onclick="handleHiddenTrigger()">管理中心</h2>
+        <span id="change-pwd-btn" onclick="openChangePwd()">🔒</span>
+        
         <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
         <div style="font-size:13px; color:#666; margin-bottom:8px;">名称</div>
         <input type="text" id="newName" class="input-style" placeholder="输入名称">
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（可批量）</div>
-        <textarea id="newUrls" class="input-style" placeholder="输入网址，自动识别（一行一个或逗号隔开）" style="height:150px; resize:none;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">确认创建新卡片</button>
-        <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="toggleAdmin(false)">退出管理模式</button>
+        <div style="font-size:13px; color:#666; margin-bottom:8px;">链接（批量）</div>
+        <textarea id="newUrls" class="input-style" placeholder="一行一个" style="height:150px; resize:none;"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建卡片</button>
+        <button class="btn-action" style="background:#f5f5f5; color:#666;" onclick="toggleAdmin(false)">退出</button>
         <div id="main-feedback" class="feedback-text"></div>
     </div>
 
     <div id="pwd-overlay">
         <div id="pwd-box">
-            <h3>管理员验证</h3>
+            <h3 id="pwd-title" style="margin-top:0">身份验证</h3>
             <input type="password" id="adminPwd" class="input-style" placeholder="请输入密码" autofocus>
             <div style="display:flex; gap:10px">
-                <button class="btn-action" style="background:var(--primary-color); color:white" onclick="doVerify()">确认</button>
+                <button id="pwd-confirm-btn" class="btn-action" style="background:var(--primary-color); color:white" onclick="verifyAction()">确认</button>
                 <button class="btn-action" style="background:#eee" onclick="closePwd()">取消</button>
             </div>
         </div>
@@ -100,23 +107,29 @@
 <script>
     let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
     let isAdminMode = false;
-    let isUnlocked = false; // 记录是否已经解锁特权
+    let isUnlocked = false; 
+    let currentIP = "正在获取...";
+    let mode = "verify"; // verify 或 change
 
-    // 核心修复：处理 URL 防止 Github 前缀错误
+    // 初始化获取 IP
+    fetch('https://api.ipify.org?format=json')
+        .then(res => res.json())
+        .then(data => {
+            currentIP = data.ip;
+            render();
+        }).catch(() => { currentIP = "未知IP"; });
+
     function formatUrl(url) {
         url = url.trim();
         if (!url) return "";
-        if (!/^https?:\/\//i.test(url)) {
-            return 'https://' + url;
-        }
-        return url;
+        return /^https?:\/\//i.test(url) ? url : 'https://' + url;
     }
 
     function getAutoLabel(url) {
-        if (url.includes('weibo.com')) return "微博主页";
-        if (url.includes('douyin.com')) return "抖音账号";
-        if (url.includes('bilibili.com')) return "B站账号";
-        return "新链接";
+        if (url.includes('weibo.com')) return "微博";
+        if (url.includes('douyin.com')) return "抖音";
+        if (url.includes('bilibili.com')) return "B站";
+        return "链接";
     }
 
     function render() {
@@ -126,19 +139,19 @@
                 <div class="name-row">
                     <input type="text" class="blogger-name-input" value="${b.name}" ${!(isAdminMode && isUnlocked) ? 'readonly' : ''} onchange="bloggers[${i}].name=this.value; saveToLocal()">
                 </div>
-                <div class="link-group" id="link-group-${i}">
+                <div class="link-group">
                     ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
                 </div>
                 ${isAdminMode && isUnlocked ? `
-                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
+                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增</button>
                 <div class="action-btns">
                     <div id="normalBtns-${i}" style="display:flex; gap:8px">
-                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
-                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${index=i})">保存当前卡片</button>
+                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除</button>
+                        <button class="btn-base btn-save" style="flex:1" onclick="saveChanges(${i})">保存</button>
                     </div>
                     <div id="confirmZone-${i}" class="confirm-zone">
                         <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
-                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除</button>
+                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认</button>
                     </div>
                     <div id="card-fb-${i}" class="feedback-text"></div>
                 </div>` : ''}
@@ -151,34 +164,47 @@
             <a href="${formatUrl(link.url)}" target="_blank" class="link-item-vertical">
                 <span class="link-label-text">${link.label}</span>
                 <span class="link-url-text">${link.url}</span>
+                <div class="ip-info">Client IP: ${currentIP}</div>
             </a>`;
         }
         return `
         <div class="edit-unit">
             <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" value="${link.label}" placeholder="链接标题">
-            <input type="text" class="url-input" value="${link.url}" placeholder="网址">
+            <input type="text" class="tag-name-input" value="${link.label}">
+            <input type="text" class="url-input" value="${link.url}">
         </div>`;
     }
 
-    // 密码验证逻辑相关
-    function checkPwdStatus() {
-        if (isUnlocked) {
-            flashFeedback('main-feedback', '✨ 您已处于特权管理模式');
-            return;
-        }
+    // 隐藏触发逻辑
+    function handleHiddenTrigger() {
+        if (isUnlocked) return;
+        mode = "verify";
+        document.getElementById('pwd-title').innerText = "身份验证";
         document.getElementById('pwd-overlay').style.display = 'flex';
-        document.getElementById('adminPwd').focus();
     }
 
-    function doVerify() {
-        if (document.getElementById('adminPwd').value === "K888") { // 设定密码为 K888
-            isUnlocked = true;
-            document.getElementById('lock-hint').innerText = "✅ 权限已解锁";
-            closePwd();
-            render();
+    function openChangePwd() {
+        mode = "change";
+        document.getElementById('pwd-title').innerText = "修改新密码";
+        document.getElementById('pwd-overlay').style.display = 'flex';
+    }
+
+    function verifyAction() {
+        const val = document.getElementById('adminPwd').value;
+        const savedPwd = localStorage.getItem('adminKey') || "K888";
+
+        if (mode === "verify") {
+            if (val === savedPwd) {
+                isUnlocked = true;
+                document.getElementById('change-pwd-btn').style.display = 'block';
+                closePwd();
+                render();
+            } else { alert("验证失败"); }
         } else {
-            alert("密码错误");
+            if (val.length < 1) return alert("密码不能为空");
+            localStorage.setItem('adminKey', val);
+            alert("密码已更新");
+            closePwd();
         }
     }
 
@@ -187,84 +213,55 @@
         document.getElementById('adminPwd').value = '';
     }
 
-    function addNewLinkLine(cardIdx) {
-        const group = document.getElementById(`link-group-${cardIdx}`);
-        const div = document.createElement('div');
-        div.className = 'edit-unit';
-        div.innerHTML = `
-            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="链接标题">
-            <input type="text" class="url-input" placeholder="粘贴网址">
-        `;
-        group.appendChild(div);
-    }
-
     function toggleAdmin(show) {
         isAdminMode = show;
         document.body.classList.toggle('admin-open', show);
-        // 如果开启管理面板但没解锁，自动提示密码
-        if (show && !isUnlocked) {
-            checkPwdStatus();
-        }
         render();
     }
 
+    // 基础存储与功能块（保持不变）
+    function saveToLocal() { localStorage.setItem('verticalBloggers', JSON.stringify(bloggers)); }
+    function saveAndRender() { saveToLocal(); render(); }
+    function addNewLinkLine(idx) {
+        const group = document.querySelectorAll('.link-group')[idx];
+        const div = document.createElement('div');
+        div.className = 'edit-unit';
+        div.innerHTML = `<span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
+            <input type="text" class="tag-name-input" placeholder="标题"><input type="text" class="url-input" placeholder="网址">`;
+        group.appendChild(div);
+    }
     function addBlogger() {
         const name = document.getElementById('newName').value.trim();
         const rawText = document.getElementById('newUrls').value.trim();
-        if (!name) return alert("请输入卡片名称");
-        
-        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
-        let validLinks = rawItems.map(url => ({ 
-            url: url.trim(), 
-            label: getAutoLabel(url) 
-        }));
-
-        bloggers.push({ name, links: validLinks });
+        if (!name) return;
+        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.length > 0);
+        bloggers.push({ name, links: rawItems.map(url => ({ url, label: getAutoLabel(url) })) });
         saveAndRender();
-        document.getElementById('newName').value = '';
-        document.getElementById('newUrls').value = '';
+        document.getElementById('newName').value = ''; document.getElementById('newUrls').value = '';
     }
-
     function saveChanges(index) {
         const card = document.querySelectorAll('.blogger-card')[index];
-        const newName = card.querySelector('.blogger-name-input').value.trim();
         const units = card.querySelectorAll('.edit-unit');
         let newLinks = [];
         units.forEach(u => {
-            const l = u.querySelector('.tag-name-input').value.trim();
-            const url = u.querySelector('.url-input').value.trim();
-            if(url) newLinks.push({ url, label: l || "新链接" });
+            const l = u.querySelector('.tag-name-input').value;
+            const url = u.querySelector('.url-input').value;
+            if(url) newLinks.push({ url, label: l });
         });
-        bloggers[index] = { name: newName, links: newLinks };
+        bloggers[index].links = newLinks;
+        bloggers[index].name = card.querySelector('.blogger-name-input').value;
         saveAndRender();
-        flashFeedback(`card-fb-${index}`, '已保存成功');
+        flashFeedback(`card-fb-${index}`, '已同步');
     }
-
-    function removeBlogger(i) {
-        bloggers.splice(i, 1);
-        saveAndRender();
+    function removeBlogger(i) { bloggers.splice(i, 1); saveAndRender(); }
+    function showConfirm(i, isDel) {
+        document.getElementById(`normalBtns-${i}`).style.display = isDel ? 'none' : 'flex';
+        document.getElementById(`confirmZone-${i}`).style.display = isDel ? 'flex' : 'none';
     }
-
-    function saveToLocal() {
-        localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
-    }
-
-    function saveAndRender() {
-        saveToLocal();
-        render();
-    }
-
-    function showConfirm(index, isDeleting) {
-        document.getElementById(`normalBtns-${index}`).style.display = isDeleting ? 'none' : 'flex';
-        document.getElementById(`confirmZone-${index}`).style.display = isDeleting ? 'flex' : 'none';
-    }
-
     function flashFeedback(id, text) {
         const el = document.getElementById(id);
         if(el) { el.innerText = text; setTimeout(() => el.innerText = "", 2000); }
     }
-
     window.onload = render;
 </script>
 </body>
