@@ -2,12 +2,12 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 布局优化云同步版</title>
+    <title>聚合导航 - 云同步正式版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; --header-height: 60px; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; flex-direction: column; }
         
-        /* 顶部配置面板优化 - 增加层级和固定高度 */
+        /* 顶部配置面板 - 解决文字阻碍问题 */
         #config-header { 
             background: #fff; border-bottom: 1px solid #ddd; 
             padding: 0 40px; height: var(--header-height);
@@ -16,7 +16,7 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         #config-left { display: flex; align-items: center; gap: 15px; }
-        #config-display { font-size: 13px; color: #666; white-space: nowrap; }
+        #config-display { font-size: 13px; color: #666; }
         #connection-status { font-weight: bold; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
         .status-offline { background: #eee; color: #999; }
         .status-online { background: #e6fffa; color: var(--success-color); }
@@ -28,8 +28,8 @@
             display: none; flex-direction: column; gap: 10px; width: 300px; z-index: 2001;
         }
 
-        /* 内容区域增加顶距，防止被 header 遮挡 */
-        #content-wrapper { flex: 1; padding: calc(var(--header-height) + 30px) 40px 40px 40px; box-sizing: border-box; transition: margin-right 0.3s; }
+        /* 内容区域 */
+        #content-wrapper { flex: 1; padding: calc(var(--header-height) + 30px) 40px 40px 40px; transition: margin-right 0.3s; }
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
         
         /* 卡片样式 */
@@ -48,15 +48,15 @@
         .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
-        .remove-link-btn { position: absolute; top: 5px; right: 8px; color: #ccc; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .remove-link-btn { position: absolute; top: 5px; right: 8px; color: #ccc; cursor: pointer; font-size: 18px; }
         .remove-link-btn:hover { color: var(--danger-color); }
 
-        .tag-name-input { border: none; font-weight: bold; width: 85%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
-        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; }
+        .tag-name-input { border: none; font-weight: bold; width: 85%; outline: none; font-size: 13px; border-bottom: 1px dashed #eee; }
+        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; margin-top: 5px; }
         
-        .add-item-btn { width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .add-item-btn { width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; }
         
-        /* 侧边管理面板 - 顶距调整 */
+        /* 侧边管理面板 */
         #side-admin-panel { position: fixed; top: var(--header-height); right: -340px; width: 340px; height: calc(100% - var(--header-height)); background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1500; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
         body.admin-open #content-wrapper { margin-right: 340px; }
@@ -65,7 +65,7 @@
         .btn-trigger { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; }
         .btn-sync { background: var(--success-color); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
         
-        .input-style { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        .input-style { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
         .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .save-feedback { color: var(--success-color); font-size: 12px; font-weight: bold; opacity: 0; transition: opacity 0.3s; margin-left: 10px; }
         .show-feedback { opacity: 1; }
@@ -79,19 +79,19 @@
                 Gist ID: <span id="display-gist-id" style="font-family: monospace;">未设置</span>
                 <span id="connection-status" class="status-offline">待连接</span>
             </div>
-            <!-- 新增：强制拉取同步按钮 -->
-            <button class="btn-sync" onclick="testConnection(true)">🔄 同步云端数据</button>
+            <!-- 手动触发按钮 -->
+            <button class="btn-sync" onclick="testConnection(true)">🔄 从云端强制同步</button>
         </div>
         
-        <button class="btn-trigger" style="padding: 6px 15px; font-size: 12px; background: #444;" onclick="toggleConfigPopup()">修改 Token/Gist 配置</button>
+        <button class="btn-trigger" style="padding: 6px 15px; font-size: 12px; background: #444;" onclick="toggleConfigPopup()">修改 Token/Gist</button>
         
         <div id="config-edit-popup">
             <label style="font-size: 12px; font-weight: bold;">GitHub Token</label>
             <input type="password" id="input-token" class="input-style" placeholder="ghp_xxx">
             <label style="font-size: 12px; font-weight: bold;">Gist ID</label>
-            <input type="text" id="input-gist" class="input-style" placeholder="粘贴你的 Gist ID">
-            <button onclick="saveConfig()" style="background:var(--success-color); color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">统一确认并测试连接</button>
-            <button onclick="toggleConfigPopup()" style="background:none; color:#999; border:none; cursor:pointer; font-size:12px;">取消关闭</button>
+            <input type="text" id="input-gist" class="input-style" placeholder="粘贴 Gist ID">
+            <button onclick="saveConfig()" style="background:var(--success-color); color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">保存并测试</button>
+            <button onclick="toggleConfigPopup()" style="background:none; color:#999; border:none; cursor:pointer; font-size:12px;">关闭</button>
         </div>
     </div>
 
@@ -101,18 +101,20 @@
 
     <div id="side-admin-panel">
         <h2 style="margin-top:0">管理中心</h2>
-        <p style="font-size:12px; color:#888;">在此创建新卡片，数据将同步至云端。</p>
-        <input type="text" id="newName" class="input-style" placeholder="输入卡片名称" style="margin-bottom:10px; width:100%;">
-        <textarea id="newUrls" class="input-style" placeholder="批量粘贴网址（自动识别）" style="height:150px; resize:none; margin-bottom:10px; width:100%;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" id="add-btn">创建新卡片</button>
-        <button class="btn-action" style="background:#f5f5f5; color:#666;" id="close-admin-btn">退出编辑模式</button>
+        <input type="text" id="newName" class="input-style" placeholder="卡片名称" style="margin-bottom:10px;">
+        <textarea id="newUrls" class="input-style" placeholder="批量粘贴网址" style="height:150px; resize:none; margin-bottom:10px;"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" id="add-btn">创建卡片</button>
+        <button class="btn-action" style="background:#f5f5f5; color:#666;" id="close-admin-btn">关闭面板</button>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" id="master-admin-btn">⚙️ 进入管理中心</button>
+        <button class="btn-trigger" id="master-admin-btn">⚙️ 管理中心</button>
     </div>
 
 <script>
+    // 注意：此处文件名必须和你 GitHub Gist 中的文件名一致！
+    const CLOUD_FILE_NAME = "nav_cloud_db.json"[cite: 1]; 
+
     let bloggers = JSON.parse(localStorage.getItem('verticalBloggers')) || [];
     let isAdminMode = false;
     let GH_TOKEN = localStorage.getItem('nav_gh_token') || "";
@@ -131,12 +133,6 @@
         render();
     });
 
-    function formatUrl(url) {
-        url = url.trim();
-        if (!/^https?:\/\//i.test(url)) return 'https://' + url;
-        return url;
-    }
-
     function toggleConfigPopup() {
         const popup = document.getElementById('config-edit-popup');
         popup.style.display = (popup.style.display === 'flex') ? 'none' : 'flex';
@@ -148,7 +144,6 @@
         localStorage.setItem('nav_gh_token', GH_TOKEN);
         localStorage.setItem('nav_gist_id', GIST_ID);
         document.getElementById('display-gist-id').innerText = GIST_ID;
-        
         await testConnection(true); 
         setTimeout(toggleConfigPopup, 1000);
     }
@@ -156,8 +151,7 @@
     async function testConnection(shouldPull = false) {
         const statusEl = document.getElementById('connection-status');
         const syncBtn = document.querySelector('.btn-sync');
-        statusEl.innerText = "正在同步...";
-        syncBtn.innerText = "⏳ 同步中...";
+        statusEl.innerText = "同步中...";
         
         try {
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -167,11 +161,11 @@
                 const gistData = await res.json();
                 statusEl.innerText = "已连接云端 ✅";
                 statusEl.className = "status-online";
-                syncBtn.innerText = "🔄 同步云端数据";
                 
-                if (shouldPull && gistData.files["nav_data.json"]) {
-                    const content = gistData.files["nav_data.json"].content;
-                    if (content) {
+                // 检查云端文件是否存在并拉取
+                if (shouldPull && gistData.files[CLOUD_FILE_NAME]) {[cite: 1]
+                    const content = gistData.files[CLOUD_FILE_NAME].content;[cite: 1]
+                    if (content && content !== "{}") {
                         bloggers = JSON.parse(content);
                         localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
                         render();
@@ -181,8 +175,21 @@
         } catch (e) {
             statusEl.innerText = "连接失败 ❌";
             statusEl.className = "status-error";
-            syncBtn.innerText = "🔄 同步失败";
         }
+    }
+
+    async function syncToCloud() {
+        if (!GH_TOKEN || !GIST_ID) return;
+        try {
+            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `token ${GH_TOKEN}` },
+                body: JSON.stringify({
+                    files: { [CLOUD_FILE_NAME]: { content: JSON.stringify(bloggers) } }[cite: 1]
+                })
+            });
+            return res.ok;
+        } catch (e) { return false; }
     }
 
     function render() {
@@ -190,100 +197,77 @@
         grid.innerHTML = bloggers.map((b, i) => `
             <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}" id="card-${i}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} placeholder="卡片名称">
+                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''}>
                 </div>
                 <div class="link-group" id="link-group-${i}">
                     ${b.links.map((link, j) => {
-                        const safeUrl = formatUrl(link.url);
                         if (!isAdminMode) {
-                            return `<a href="${safeUrl}" target="_blank" class="link-item-vertical">
+                            return `<a href="${link.url}" target="_blank" class="link-item-vertical">
                                 <span class="link-label-text">${link.label}</span>
-                                <span class="link-url-text">${safeUrl}</span>
+                                <span class="link-url-text">${link.url}</span>
                             </a>`;
                         }
                         return `<div class="edit-unit">
                             <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
                             <input type="text" class="tag-name-input" value="${link.label}">
-                            <input type="text" class="url-input" value="${safeUrl}">
+                            <input type="text" class="url-input" value="${link.url}">
                         </div>`;
                     }).join('')}
                 </div>
                 ${isAdminMode ? `
-                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增链接</button>
+                <button class="add-item-btn" onclick="addNewLine(${i})">+ 新增链接</button>
                 <div style="margin-top:15px; display:flex; align-items:center; gap:5px">
-                    <button onclick="removeBlogger(${i})" style="padding:8px 10px; background:#f5f5f5; border:none; border-radius:6px; cursor:pointer; color:#999; font-size:12px;">删除</button>
+                    <button onclick="removeBlogger(${i})" style="font-size:12px; border:none; background:#eee; padding:8px; border-radius:6px; cursor:pointer;">删除</button>
                     <button onclick="saveChanges(${i})" style="flex:1; background:var(--success-color); color:white; border:none; padding:8px; border-radius:6px; cursor:pointer; font-weight:bold;">保存并同步</button>
-                    <span class="save-feedback" id="feedback-${i}">已同步</span>
+                    <span class="save-feedback" id="feedback-${i}">OK!</span>
                 </div>` : ''}
             </div>`).join('');
     }
 
-    async function syncCloud() {
-        if (!GH_TOKEN || !GIST_ID) return;
-        try {
-            await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `token ${GH_TOKEN}` },
-                body: JSON.stringify({
-                    files: { "nav_data.json": { content: JSON.stringify(bloggers) } }
-                })
-            });
-        } catch (e) { console.error("同步失败"); }
-    }
-
     function saveChanges(index) {
         const card = document.getElementById(`card-${index}`);
-        const newName = card.querySelector('.blogger-name-input').value.trim();
+        const name = card.querySelector('.blogger-name-input').value;
         const units = card.querySelectorAll('.edit-unit');
-        let newLinks = [];
+        let links = [];
         units.forEach(u => {
-            const l = u.querySelector('.tag-name-input').value.trim();
-            const url = u.querySelector('.url-input').value.trim();
-            if(url) newLinks.push({ url: formatUrl(url), label: l || "链接" });
+            const label = u.querySelector('.tag-name-input').value;
+            const url = u.querySelector('.url-input').value;
+            if(url) links.push({ label: label || "链接", url });
         });
-        bloggers[index].name = newName || "未命名";
-        bloggers[index].links = newLinks;
-        saveAndRender();
-        const fb = document.getElementById(`feedback-${index}`);
-        fb.classList.add('show-feedback');
-        setTimeout(() => fb.classList.remove('show-feedback'), 2000);
+        bloggers[index] = { name, links };
+        
+        localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
+        syncToCloud().then(success => {
+            if(success) {
+                const fb = document.getElementById(`feedback-${index}`);
+                fb.classList.add('show-feedback');
+                setTimeout(() => fb.classList.remove('show-feedback'), 2000);
+            }
+        });
     }
 
     function addBlogger() {
         const name = document.getElementById('newName').value.trim();
-        const rawText = document.getElementById('newUrls').value.trim();
+        const raw = document.getElementById('newUrls').value.trim();
         if (!name) return;
-        const validLinks = rawText.split(/[\s\n,]+/).filter(u => u.includes('.')).map(u => ({
-            url: formatUrl(u), label: "新链接"
-        }));
-        bloggers.push({ name, links: validLinks });
-        saveAndRender();
-        document.getElementById('newName').value = '';
-        document.getElementById('newUrls').value = '';
-    }
-
-    function saveAndRender() {
+        const links = raw.split(/[\s\n]+/).filter(u => u.includes('.')).map(u => ({ label: "新链接", url: u }));
+        bloggers.push({ name, links });
         localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
-        syncCloud();
-        render();
+        syncToCloud().then(() => {
+            render();
+            document.getElementById('newName').value = '';
+            document.getElementById('newUrls').value = '';
+        });
     }
 
-    function toggleAdmin(show) {
-        isAdminMode = show;
-        document.body.classList.toggle('admin-open', show);
-        render();
-    }
-
-    function removeBlogger(i) { if(confirm("确定删除？")) { bloggers.splice(i, 1); saveAndRender(); } }
-
-    function addNewLinkLine(cardIdx) {
-        const group = document.getElementById(`link-group-${cardIdx}`);
-        const div = document.createElement('div');
-        div.className = 'edit-unit';
-        div.innerHTML = `<span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="标题">
-            <input type="text" class="url-input" placeholder="网址">`;
-        group.appendChild(div);
+    function toggleAdmin(show) { isAdminMode = show; document.body.classList.toggle('admin-open', show); render(); }
+    function removeBlogger(i) { if(confirm("确定删除？")) { bloggers.splice(i, 1); localStorage.setItem('verticalBloggers', JSON.stringify(bloggers)); syncToCloud().then(render); } }
+    function addNewLine(i) {
+        const g = document.getElementById(`link-group-${i}`);
+        const d = document.createElement('div');
+        d.className = 'edit-unit';
+        d.innerHTML = `<span class="remove-link-btn" onclick="this.parentElement.remove()">×</span><input type="text" class="tag-name-input" placeholder="标题"><input type="text" class="url-input" placeholder="网址">`;
+        g.appendChild(d);
     }
 </script>
 </body>
