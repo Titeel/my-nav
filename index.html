@@ -2,125 +2,139 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>精简书签同步版</title>
+    <title>Gist 同步调试版</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
-        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .link { display: block; margin: 5px 0; color: #007bff; text-decoration: none; }
-        .config-bar { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd; }
-        input { padding: 8px; margin-right: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        #log { color: #d93025; font-size: 12px; margin-top: 10px; }
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 800px; margin: auto; background: #f9f9f9; }
+        .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { width: calc(100% - 22px); padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #0056b3; }
+        #console { background: #333; color: #00ff00; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<div class="config-bar">
-    <input type="password" id="token" placeholder="GitHub Token">
-    <input type="text" id="gistId" placeholder="Gist ID">
-    <button onclick="saveConfig()">1. 保存并连接</button>
-    <div id="log">状态：等待配置...</div>
+<div class="box">
+    <h3>第一步：配置云端</h3>
+    <input type="password" id="token" placeholder="在此粘贴 Token (ghp_开头的那个)">
+    <input type="text" id="gistId" placeholder="在此粘贴 Gist ID (32位那串字符)">
+    <button onclick="initConnect()">连接并拉取数据</button>
 </div>
 
-<div id="app">
-    <div class="card">
-        <h3>添加测试链接</h3>
-        <input type="text" id="siteName" placeholder="站点名">
-        <input type="text" id="siteUrl" placeholder="网址 (如 baidu.com)">
-        <button onclick="addItem()">2. 添加并同步</button>
-    </div>
+<div class="box" id="editor" style="display:none;">
+    <h3>第二步：添加数据</h3>
+    <input type="text" id="title" placeholder="网站名称">
+    <input type="text" id="url" placeholder="网址 (例如: jd.com)">
+    <button onclick="doSync()">同步到云端</button>
+    <hr>
     <div id="list"></div>
 </div>
 
+<div class="box">
+    <h3>🕵️ 控制台日志 (如果没反应看这里)</h3>
+    <div id="console">等待操作...</div>
+</div>
+
 <script>
+    const FILE_NAME = "nav_cloud_db.json";
     let db = [];
-    const FILE_NAME = "nav_cloud_db.json";[cite: 1]
 
-    // 解决“前缀”问题的关键函数
-    function cleanUrl(url) {
-        url = url.trim();
-        if (!/^https?:\/\//i.test(url)) return 'https://' + url;
-        return url;
+    function log(msg, isError = false) {
+        const con = document.getElementById('console');
+        const time = new Date().toLocaleTimeString();
+        con.innerHTML += `<div style="color:${isError ? '#ff4d4f' : '#00ff00'}">[${time}] ${msg}</div>`;
+        con.scrollTop = con.scrollHeight;
     }
 
-    // 保存配置并尝试拉取
-    function saveConfig() {
-        localStorage.setItem('gh_token', document.getElementById('token').value);
-        localStorage.setItem('gh_gist', document.getElementById('gistId').value);
-        pull();
-    }
-
-    // 从云端拉取
-    async function pull() {
-        const tk = localStorage.getItem('gh_token');
-        const gid = localStorage.getItem('gh_gist');
-        const log = document.getElementById('log');
+    async function initConnect() {
+        const tk = document.getElementById('token').value.trim();
+        const gid = document.getElementById('gistId').value.trim();
         
-        if(!tk || !gid) return;
-
+        if(!tk || !gid) return alert("请先填写 Token 和 ID");
+        
+        localStorage.setItem('nav_tk', tk);
+        localStorage.setItem('nav_gid', gid);
+        
+        log("🚀 开始尝试拉取云端数据...");
+        
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 headers: { 'Authorization': `token ${tk}` }
             });
+            
             if(res.ok) {
                 const data = await res.json();
-                const content = data.files[FILE_NAME].content;[cite: 1]
-                db = JSON.parse(content || "[]");
-                render();
-                log.innerText = "状态：云端连接成功 ✅";
-                log.style.color = "green";
+                if(data.files[FILE_NAME]) {
+                    db = JSON.parse(data.files[FILE_NAME].content || "[]");
+                    document.getElementById('editor').style.display = 'block';
+                    render();
+                    log("✅ 成功连接！已获取云端数据。");
+                } else {
+                    log(`⚠️ 警告：Gist 中没找到 ${FILE_NAME} 文件，请检查文件名！`, true);
+                }
             } else {
-                log.innerText = "状态：连接失败 (请检查Token和ID)";
+                const err = await res.json();
+                log(`❌ 连接失败：${res.status} - ${err.message}`, true);
+                if(res.status === 401) log("💡 提示：可能是 Token 错了或已过期。");
+                if(res.status === 404) log("💡 提示：Gist ID 找不到，请确认 ID 是否正确。");
             }
-        } catch(e) { log.innerText = "状态：网络错误"; }
+        } catch(e) {
+            log(`❌ 网络报错：${e.message}`, true);
+        }
     }
 
-    // 同步到云端
-    async function push() {
-        const tk = localStorage.getItem('gh_token');
-        const gid = localStorage.getItem('gh_gist');
-        const log = document.getElementById('log');
+    async function doSync() {
+        const name = document.getElementById('title').value;
+        const url = document.getElementById('url').value;
+        const tk = localStorage.getItem('nav_tk');
+        const gid = localStorage.getItem('nav_gid');
 
+        if(!name || !url) return alert("信息填全");
+
+        // 自动补齐 https 防止前缀错误
+        const fullUrl = url.startsWith('http') ? url : 'https://' + url;
+        db.push({ name, url: fullUrl });
+
+        log("📤 正在同步到云端...");
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `token ${tk}` },
                 body: JSON.stringify({
-                    files: { [FILE_NAME]: { content: JSON.stringify(db) } }[cite: 1]
+                    files: { [FILE_NAME]: { content: JSON.stringify(db) } }
                 })
             });
+            
             if(res.ok) {
-                log.innerText = "状态：同步成功 ✅";
+                log("🎊 同步成功！GitHub 已更新。");
                 render();
+                document.getElementById('title').value = "";
+                document.getElementById('url').value = "";
             } else {
                 const err = await res.json();
-                alert("同步失败：" + err.message);
+                log(`❌ 同步失败：${err.message}`, true);
             }
-        } catch(e) { alert("网络异常"); }
-    }
-
-    function addItem() {
-        const name = document.getElementById('siteName').value;
-        const url = document.getElementById('siteUrl').value;
-        if(!name || !url) return alert("请填满信息");
-        
-        db.push({ name, url: cleanUrl(url) }); // 自动清洗 URL
-        push();
+        } catch(e) { log(`❌ 同步异常：${e.message}`, true); }
     }
 
     function render() {
-        document.getElementById('list').innerHTML = db.map(item => `
-            <div class="card">
-                <strong>${item.name}</strong>
-                <a class="link" href="${item.url}" target="_blank">${item.url}</a>
+        const list = document.getElementById('list');
+        list.innerHTML = db.map(i => `
+            <div style="border-bottom:1px solid #eee; padding:10px 0;">
+                <b>${i.name}</b> <br> 
+                <a href="${i.url}" target="_blank" style="font-size:12px; color:#999;">${i.url}</a>
             </div>
         `).join('');
     }
 
-    // 页面加载时自动填入
+    // 自动加载历史
     window.onload = () => {
-        document.getElementById('token').value = localStorage.getItem('gh_token') || "";
-        document.getElementById('gistId').value = localStorage.getItem('gh_gist') || "";
-        pull();
+        const t = localStorage.getItem('nav_tk');
+        const g = localStorage.getItem('nav_gid');
+        if(t) document.getElementById('token').value = t;
+        if(g) document.getElementById('gistId').value = g;
+        if(t && g) initConnect();
     };
 </script>
 </body>
