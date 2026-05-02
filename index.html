@@ -2,102 +2,75 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 安全同步版</title>
+    <title>聚合导航 - 强制重置增强版</title>
     <style>
-        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; }
-        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
-        body.admin-open #content-wrapper { margin-right: 340px; }
+        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --bg-gray: #f4f7f9; }
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); }
+        
+        /* 顶部强制管理条 */
+        #setup-bar { background: #333; color: white; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+        #setup-bar button { background: var(--primary-color); color: white; border: none; padding: 5px 12px; border-radius: 4px; cursor: pointer; }
+
+        #content-wrapper { padding: 40px; box-sizing: border-box; }
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
         .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 20px; box-sizing: border-box; }
-        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; outline: none; background: transparent; width: 100%; }
+        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; font-weight: bold; }
         .link-group { display: flex; flex-direction: column; gap: 10px; }
-        .link-item-vertical { display: flex; flex-direction: column; padding: 12px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; text-decoration: none; color: #333; }
-        .link-label-text { font-size: 14px; font-weight: bold; }
-        .edit-unit { position: relative; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; }
-        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; border-bottom: 1px dashed #eee; margin-bottom: 4px; }
-        .url-input { border: none; width: 100%; font-size: 11px; color: var(--primary-color); outline: none; }
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; display: flex; flex-direction: column; }
-        body.admin-open #side-admin-panel { right: 0; }
-        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; display: flex; gap: 10px; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 13px; }
-        .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        #log-container { flex: 1; overflow-y: auto; background: #f9f9f9; padding: 10px; border-radius: 8px; font-size: 11px; margin-top: 10px; }
+        .link-item { display: block; padding: 12px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; text-decoration: none; color: #333; font-weight: bold; }
+        
+        /* 管理面板 */
+        #admin-panel { position: fixed; top: 50px; right: 20px; width: 300px; background: white; box-shadow: 0 0 20px rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; display: none; z-index: 1001; }
+        .input-style { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
+    <!-- 顶部状态栏，方便随时重置 -->
+    <div id="setup-bar">
+        <div>状态：<span id="sync-status">待检查配置</span> | Gist ID: <span id="cur-id">未设置</span></div>
+        <button onclick="forceReset()">⚙️ 点击重置 Token 和 Gist ID</button>
+    </div>
+
     <div id="content-wrapper">
-        <div id="main-grid">正在连接云端，请稍候...</div>
+        <div id="main-grid">正在加载云端数据...</div>
     </div>
 
-    <div id="side-admin-panel">
-        <h2 style="margin-top:0">管理中心</h2>
-        <div style="font-size:12px; color:#999; margin-bottom:20px;">当前 Gist ID: <span id="display-gist-id">未设置</span></div>
-        <input type="text" id="newName" class="input-style" placeholder="新卡片名称">
-        <textarea id="newUrls" class="input-style" placeholder="粘贴网址（一行一个）" style="height:80px; resize:none;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addBlogger()">创建并上传</button>
-        <button class="btn-action" style="background:#eee;" onclick="resetConfig()">重置 Token / Gist ID</button>
-        <button class="btn-action" style="background:#f5f5f5;" onclick="toggleAdmin(false)">收起面板</button>
-        
-        <div id="log-container">同步日志：<br><div id="status-log"></div></div>
+    <!-- 管理面板 -->
+    <div id="admin-panel">
+        <h3>管理卡片</h3>
+        <input type="text" id="newName" class="input-style" placeholder="卡片名称">
+        <textarea id="newUrls" class="input-style" placeholder="网址（一行一个）" style="height:80px"></textarea>
+        <button onclick="addBlogger()" style="width:100%; padding:10px; background:var(--primary-color); color:white; border:none; border-radius:6px; cursor:pointer">创建卡片并上传</button>
+        <button onclick="document.getElementById('admin-panel').style.display='none'" style="width:100%; margin-top:10px; background:none; border:none; color:#999; cursor:pointer">关闭</button>
     </div>
 
-    <div id="float-tools">
-        <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 管理卡片</button>
-    </div>
+    <button onclick="document.getElementById('admin-panel').style.display='block'" style="position:fixed; bottom:20px; right:20px; padding:15px 25px; border-radius:50px; background:#333; color:white; border:none; cursor:pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">+ 管理/添加卡片</button>
 
 <script>
-    // --- 安全配置区：不再写死 Token ---
     let GH_TOKEN = localStorage.getItem('nav_gh_token');
     let GIST_ID = localStorage.getItem('nav_gist_id');
+    let bloggers = [];
 
-    // 如果没有配置，弹出初始化询问
-    async function checkConfig() {
-        if (!GH_TOKEN || !GIST_ID) {
-            const t = prompt("【首次使用配置】\n请输入你的 GitHub Token (确保勾选了 gist 权限):");
-            const g = prompt("请输入你的 Gist ID (跳转页面网址末尾那一串):");
-            if (t && g) {
-                localStorage.setItem('nav_gh_token', t.trim());
-                localStorage.setItem('nav_gist_id', g.trim());
-                location.reload();
-            } else {
-                document.getElementById('main-grid').innerHTML = "<h2>请先点击右下角管理按钮配置 Token。</h2>";
-            }
-            return false;
+    // 强制重置函数
+    function forceReset() {
+        const t = prompt("请输入新的 GitHub Token (ghp_ 开头):", GH_TOKEN || "");
+        const g = prompt("请输入新的 Gist ID:", GIST_ID || "");
+        if (t && g) {
+            localStorage.setItem('nav_gh_token', t.trim());
+            localStorage.setItem('nav_gist_id', g.trim());
+            alert("配置已更新，正在刷新页面...");
+            location.reload();
         }
-        document.getElementById('display-gist-id').innerText = GIST_ID;
-        return true;
     }
 
-    let bloggers = [];
-    let systemLogs = [];
-
-    async function syncCloud(actionType, detail) {
-        if (!GH_TOKEN || !GIST_ID) return;
-        const logMsg = `[${new Date().toLocaleTimeString()}] ${actionType}: ${detail}`;
-        systemLogs.unshift(logMsg);
-        
-        const exportData = bloggers.map(b => ({
-            name: b.name,
-            links: b.links.map(l => ({ label: l.label, url: btoa(l.url) }))
-        }));
-
-        try {
-            const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `token ${GH_TOKEN}` },
-                body: JSON.stringify({ files: { "nav_cloud_db.json": { content: JSON.stringify({ data: exportData, logs: systemLogs.slice(0, 50) }) } } })
-            });
-            if (res.status === 401) throw new Error("Token 失效或权限不足");
-            if (res.status === 404) throw new Error("Gist ID 不正确");
-            document.getElementById('status-log').prepend(logMsg + " - 成功\n");
-        } catch(e) {
-            alert("同步失败: " + e.message);
-            document.getElementById('status-log').prepend(logMsg + " - 失败\n");
+    async function checkConfig() {
+        if (!GH_TOKEN || !GIST_ID) {
+            document.getElementById('main-grid').innerHTML = "<h2>请点击顶部的“重置”按钮配置 Token 和 Gist ID。</h2>";
+            document.getElementById('sync-status').innerText = "未配置";
+            return false;
         }
+        document.getElementById('cur-id').innerText = GIST_ID;
+        return true;
     }
 
     async function loadCloud() {
@@ -106,41 +79,42 @@
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 headers: { 'Authorization': `token ${GH_TOKEN}` }
             });
+            if (!res.ok) throw new Error("连接失败，请检查 Token 权限或 Gist ID");
             const json = await res.json();
             const db = JSON.parse(json.files["nav_cloud_db.json"].content);
-            systemLogs = db.logs || [];
-            bloggers = db.data.map(b => ({
-                name: b.name,
-                links: b.links.map(l => ({ label: l.label, url: atob(l.url) }))
-            }));
+            bloggers = db.data || [];
+            document.getElementById('sync-status').innerText = "云端已连接";
             render();
         } catch(e) {
-            document.getElementById('main-grid').innerText = "云端为空或配置错误。请开始创建！";
+            document.getElementById('main-grid').innerHTML = "云端没有数据或配置错误。请点击右下角按钮添加第一个卡片。";
+            document.getElementById('sync-status').innerText = "读取失败";
+        }
+    }
+
+    async function syncCloud() {
+        document.getElementById('sync-status').innerText = "正在同步...";
+        try {
+            await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `token ${GH_TOKEN}` },
+                body: JSON.stringify({
+                    files: { "nav_cloud_db.json": { content: JSON.stringify({ data: bloggers }) } }
+                })
+            });
+            document.getElementById('sync-status').innerText = "同步成功";
+        } catch(e) {
+            alert("同步失败，请检查网络或 Token 权限");
         }
     }
 
     function render() {
         const grid = document.getElementById('main-grid');
-        const isAdmin = document.body.classList.contains('admin-open');
         grid.innerHTML = bloggers.map((b, i) => `
             <div class="blogger-card">
-                <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" onchange="bloggers[${i}].name=this.value; syncCloud('修改名称', this.value)">
-                </div>
+                <div class="name-row">${b.name} <span style="color:red; cursor:pointer; font-size:12px" onclick="deleteCard(${i})">删除</span></div>
                 <div class="link-group">
-                    ${b.links.map((l, j) => isAdmin ? `
-                        <div class="edit-unit">
-                            <input type="text" class="tag-name-input" value="${l.label}" onchange="bloggers[${i}].links[${j}].label=this.value">
-                            <input type="text" class="url-input" value="${l.url}" onchange="bloggers[${i}].links[${j}].url=this.value">
-                            <span style="cursor:pointer; color:red; font-size:10px" onclick="bloggers[${i}].links.splice(${j},1); render()">[删]</span>
-                        </div>` : `
-                        <a href="${l.url}" target="_blank" class="link-item-vertical">
-                            <span class="link-label-text">${l.label}</span>
-                        </a>`).join('')}
+                    ${b.links.map(l => `<a href="${l.url}" target="_blank" class="link-item">${l.label}</a>`).join('')}
                 </div>
-                ${isAdmin ? `<button onclick="bloggers[${i}].links.push({label:'新链接', url:''}); render()" style="width:100%; margin-top:10px; border:1px dashed #ccc; background:none; cursor:pointer">+ 加一行</button>
-                             <button onclick="syncCloud('保存', '${b.name}')" style="width:100%; margin-top:5px; background:var(--success-color); color:white; border:none; border-radius:4px; padding:5px; cursor:pointer">同步此卡片</button>
-                             <button onclick="bloggers.splice(${i},1); syncCloud('删除', '${b.name}'); render()" style="width:100%; margin-top:5px; background:none; color:red; border:none; cursor:pointer">删除整个卡片</button>` : ''}
             </div>`).join('');
     }
 
@@ -148,22 +122,18 @@
         const name = document.getElementById('newName').value;
         const urls = document.getElementById('newUrls').value.split('\n').filter(u => u.trim());
         if(!name) return;
-        bloggers.push({ name, links: urls.map(u => ({ label: "链接", url: u.trim() })) });
-        syncCloud('新建卡片', name);
+        bloggers.push({ name, links: urls.map(u => ({ label: "点击访问", url: u.trim() })) });
+        render();
+        syncCloud();
         document.getElementById('newName').value = ""; document.getElementById('newUrls').value = "";
-        render();
     }
 
-    function resetConfig() {
-        if(confirm("确定要重置配置吗？这将清除本地保存的 Token 和 Gist ID。")) {
-            localStorage.clear();
-            location.reload();
+    function deleteCard(index) {
+        if(confirm("确定删除吗？")) {
+            bloggers.splice(index, 1);
+            render();
+            syncCloud();
         }
-    }
-
-    function toggleAdmin(s) {
-        document.body.classList.toggle('admin-open', s);
-        render();
     }
 
     window.onload = loadCloud;
