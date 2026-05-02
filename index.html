@@ -2,48 +2,34 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 云端深度编辑修复版</title>
+    <title>聚合导航 - 云端修复版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; }
-        
         #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
         body.admin-open #content-wrapper { margin-right: 360px; }
-
-        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
-        
+        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; min-height: 200px; }
         .blogger-card { width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; }
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
-
         .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 85%; }
-        
         .link-group { display: flex; flex-direction: column; gap: 10px; }
         .link-item-vertical { display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none; }
         .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
         .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
         .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
         .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
         .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
         .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; }
-        
         .remove-link-btn { position: absolute; top: 8px; right: 8px; color: #ccc; cursor: pointer; font-size: 16px; }
-        .remove-link-btn:hover { color: var(--danger-color); }
-
         .add-item-btn { width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
-
         #side-admin-panel { position: fixed; top: 0; right: -360px; width: 360px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 25px; box-sizing: border-box; visibility: hidden; overflow-y: auto; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
-        
         .input-style { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
         .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        
         #console { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 150px; overflow-y: auto; margin-top: 10px; }
-
         #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; }
         .btn-trigger { background: #333; color: white; border: none; padding: 12px 25px; border-radius: 30px; cursor: pointer; font-size: 14px; }
-        
         .action-btns { margin-top: 15px; padding-top: 10px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
         .btn-base { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; }
     </style>
@@ -51,7 +37,11 @@
 <body>
 
 <div id="content-wrapper">
-    <div id="main-grid"></div>
+    <div id="main-grid">
+        <div style="text-align: center; grid-column: 1/-1; color: #999; padding-top: 100px;">
+            首次使用，请点击右下角“管理中心”进行云端配置
+        </div>
+    </div>
 </div>
 
 <div id="side-admin-panel">
@@ -60,21 +50,21 @@
         <h4 style="margin-top:0">1. 云端配置</h4>
         <input type="password" id="token" class="input-style" placeholder="GitHub Token">
         <input type="text" id="gistId" class="input-style" placeholder="Gist ID">
-        <button class="btn-action" style="background:#007bff; color:white;" onclick="initConnect()">连接云端</button>
+        <button class="btn-action" style="background:#007bff; color:white;" onclick="initConnect()">连接并加载数据</button>
+        <button class="btn-action" style="background:#666; color:white; font-size: 10px;" onclick="clearLocal()">重置本地缓存(应急用)</button>
     </div>
 
     <div id="editor-ui" style="display:none">
         <div style="background:#f9f9f9; padding:15px; border-radius:10px; margin-bottom:20px;">
             <h4 style="margin-top:0">2. 新增卡片</h4>
-            <input type="text" id="newName" class="input-style" placeholder="名称">
+            <input type="text" id="newName" class="input-style" placeholder="卡片名称">
             <textarea id="newUrls" class="input-style" placeholder="网址(一行一个)" style="height:100px; resize:none;"></textarea>
-            <button class="btn-action" style="background:var(--success-color); color:white;" onclick="addBlogger()">创建并同步</button>
+            <button class="btn-action" style="background:var(--success-color); color:white;" onclick="addBlogger()">确认创建并同步</button>
         </div>
-        <button class="btn-action" style="background:#eee; color:#666;" onclick="toggleAdmin(false)">退出管理</button>
     </div>
-
+    <button class="btn-action" style="background:#eee; color:#666;" onclick="toggleAdmin(false)">退出管理</button>
     <h4>系统日志</h4>
-    <div id="console">等待操作...</div>
+    <div id="console">系统就绪</div>
 </div>
 
 <div id="float-tools">
@@ -86,7 +76,6 @@
     let bloggers = [];
     let isAdminMode = false;
 
-    // 日志系统
     function log(msg, isError = false) {
         const con = document.getElementById('console');
         const color = isError ? '#f85149' : '#7ee787';
@@ -94,15 +83,14 @@
         con.scrollTop = con.scrollHeight;
     }
 
-    // 初始化连接
     async function initConnect() {
         const tk = document.getElementById('token').value.trim();
         const gid = document.getElementById('gistId').value.trim();
-        if(!tk || !gid) return alert("配置不能为空");
+        if(!tk || !gid) return alert("请填写 Token 和 Gist ID");
 
         localStorage.setItem('nav_tk', tk);
         localStorage.setItem('nav_gid', gid);
-        log("🔍 尝试拉取云端数据...");
+        log("🔍 正在拉取云端数据...");
 
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
@@ -110,22 +98,25 @@
             });
             if(res.ok) {
                 const data = await res.json();
-                const content = data.files[FILE_NAME]?.content || "[]";
+                const content = data.files[FILE_NAME]?.content || "[]";[cite: 5]
                 bloggers = JSON.parse(content);
                 document.getElementById('editor-ui').style.display = 'block';
                 log("✅ 连接成功");
-                render();
-            } else { log("❌ 连接失败，请检查Token或ID", true); }
-        } catch(e) { log("❌ 网络异常", true); }
+                render();[cite: 4]
+            } else { log("❌ 连接失败，请检查配置", true); }
+        } catch(e) { log("❌ 网络请求异常", true); }
     }
 
-    // 渲染函数[cite: 4]
     function render() {
         const grid = document.getElementById('main-grid');
+        if (bloggers.length === 0) {
+            grid.innerHTML = '<div style="text-align: center; grid-column: 1/-1; color: #999; padding-top: 100px;">暂无卡片数据，请先创建</div>';[cite: 4]
+            return;
+        }
         grid.innerHTML = bloggers.map((b, i) => `
             <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''}>
+                    <input type="text" class="blogger-name-input" id="name-input-${i}" value="${b.name}" ${!isAdminMode ? 'readonly' : ''}>
                 </div>
                 <div class="link-group" id="link-group-${i}">
                     ${b.links.map((link, j) => renderLinkItem(link)).join('')}
@@ -136,7 +127,7 @@
                     <button class="btn-base" style="background:var(--primary-color); color:white" onclick="saveBlogger(${i})">保存当前卡片</button>
                     <button class="btn-base" style="background:var(--danger-color); color:white" onclick="deleteBlogger(${i})">删除整个卡片</button>
                 </div>` : ''}
-            </div>`).join('');
+            </div>`).join('');[cite: 4]
     }
 
     function renderLinkItem(link) {
@@ -153,34 +144,32 @@
         </div>`;[cite: 4]
     }
 
-    // 云端同步逻辑
     async function syncCloud() {
         const tk = localStorage.getItem('nav_tk');
         const gid = localStorage.getItem('nav_gid');
-        log("📤 同步云端中...");
+        log("📤 同步中...");
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `token ${tk}` },
-                body: JSON.stringify({ files: { [FILE_NAME]: { content: JSON.stringify(bloggers) } } })
+                body: JSON.stringify({ files: { [FILE_NAME]: { content: JSON.stringify(bloggers) } } })[cite: 5]
             });
             if(res.ok) { log("🎊 同步完成"); render(); }
             else { log("❌ 同步失败", true); }
-        } catch(e) { log("❌ 网络故障", true); }
+        } catch(e) { log("❌ 网络异常", true); }
     }
 
-    // 功能按键函数[cite: 4]
     function addBlogger() {
         const name = document.getElementById('newName').value.trim();
         const urls = document.getElementById('newUrls').value.trim();
         if(!name) return;
         const links = urls.split('\n').filter(u => u.trim()).map(u => {
             let url = u.trim();
-            if(!/^https?:\/\//i.test(url)) url = 'https://' + url;
+            if(!/^https?:\/\//i.test(url)) url = 'https://' + url;[cite: 5]
             return { url, label: "新链接" };
         });
-        bloggers.push({ name, links });
-        syncCloud();
+        bloggers.push({ name, links });[cite: 4]
+        syncCloud();[cite: 5]
         document.getElementById('newName').value = "";
         document.getElementById('newUrls').value = "";
     }
@@ -195,13 +184,13 @@
             const url = u.querySelector('.url-input').value;
             if(url) links.push({ label: l, url: url });
         });
-        bloggers[index] = { name, links };
-        syncCloud();
+        bloggers[index] = { name, links };[cite: 4]
+        syncCloud();[cite: 5]
     }
 
     function deleteBlogger(index) {
         if(confirm("确定删除卡片？")) {
-            bloggers.splice(index, 1);
+            bloggers.splice(index, 1);[cite: 5]
             syncCloud();
         }
     }
@@ -222,12 +211,22 @@
         render();[cite: 4]
     }
 
+    function clearLocal() {
+        if(confirm("确定要清除本地配置信息吗？")) {
+            localStorage.clear();
+            location.reload();
+        }
+    }
+
+    // 自动加载逻辑
     window.onload = () => {
         const tk = localStorage.getItem('nav_tk');
         const gid = localStorage.getItem('nav_gid');
-        if(tk) document.getElementById('token').value = tk;
-        if(gid) document.getElementById('gistId').value = gid;
-        if(tk && gid) initConnect();
+        if(tk && gid) {
+            document.getElementById('token').value = tk;
+            document.getElementById('gistId').value = gid;
+            initConnect();[cite: 5]
+        }
     };
 </script>
 </body>
