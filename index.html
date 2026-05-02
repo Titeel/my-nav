@@ -1,166 +1,126 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 深度修复版</title>
+    <title>精简书签同步版</title>
     <style>
-        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; --header-height: 65px; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); padding-top: var(--header-height); }
-        #config-header { background: #fff; border-bottom: 1px solid #ddd; padding: 0 20px; height: var(--header-height); display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 2000; }
-        #status-tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #eee; margin-left: 10px; }
-        .online { background: #e6fffa !important; color: var(--success-color); }
-        .offline { background: #fff1f0 !important; color: var(--danger-color); }
-        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 320px); gap: 20px; padding: 20px; justify-content: center; }
-        .blogger-card { background: #fff; border-radius: 12px; padding: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .link-item { display: block; padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px; border: 1px solid transparent; }
-        .link-item:hover { border-color: var(--primary-color); background: #fff; }
-        .edit-unit { background: #f1f3f5; padding: 8px; border-radius: 6px; margin-bottom: 8px; position: relative; }
-        #admin-panel { position: fixed; top: var(--header-height); right: -350px; width: 320px; height: 100%; background: #fff; box-shadow: -5px 0 15px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1500; padding: 20px; }
-        body.panel-open #admin-panel { right: 0; }
-        .btn { border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
-        .btn-primary { background: var(--primary-color); color: #fff; }
-        .btn-success { background: var(--success-color); color: #fff; }
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .link { display: block; margin: 5px 0; color: #007bff; text-decoration: none; }
+        .config-bar { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #ddd; }
+        input { padding: 8px; margin-right: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        #log { color: #d93025; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-<div id="config-header">
-    <div style="display:flex; align-items:center;">
-        <span style="font-size:14px; color:#666;">云端状态:</span>
-        <span id="status-tag">未检测</span>
-        <button class="btn btn-success" style="margin-left:15px; font-size:11px;" onclick="pull()">从云端拉取</button>
-    </div>
-    <div>
-        <input type="password" id="t-in" placeholder="Token" style="padding:5px; width:120px;">
-        <input type="text" id="g-in" placeholder="Gist ID" style="padding:5px; width:120px;">
-        <button class="btn btn-primary" onclick="saveConf()">保存配置</button>
-    </div>
+<div class="config-bar">
+    <input type="password" id="token" placeholder="GitHub Token">
+    <input type="text" id="gistId" placeholder="Gist ID">
+    <button onclick="saveConfig()">1. 保存并连接</button>
+    <div id="log">状态：等待配置...</div>
 </div>
 
-<div id="main-grid"></div>
-
-<div id="admin-panel">
-    <h3>管理中心</h3>
-    <input type="text" id="nc-name" placeholder="标题" style="width:100%; padding:8px; margin-bottom:10px;">
-    <textarea id="nc-urls" placeholder="每行一个网址" style="width:100%; height:100px; padding:8px; margin-bottom:10px;"></textarea>
-    <button class="btn btn-primary" style="width:100%" onclick="addCard()">创建并同步</button>
-    <hr>
-    <button class="btn" style="width:100%" onclick="toggleEdit(false)">退出编辑模式</button>
-</div>
-
-<div style="position:fixed; bottom:20px; right:20px;">
-    <button class="btn" style="background:#333; color:#fff; padding:15px; border-radius:50px;" onclick="toggleEdit(true)">⚙️ 管理卡片</button>
+<div id="app">
+    <div class="card">
+        <h3>添加测试链接</h3>
+        <input type="text" id="siteName" placeholder="站点名">
+        <input type="text" id="siteUrl" placeholder="网址 (如 baidu.com)">
+        <button onclick="addItem()">2. 添加并同步</button>
+    </div>
+    <div id="list"></div>
 </div>
 
 <script>
-    const FILE_NAME = "nav_cloud_db.json"; // 必须与 GitHub 一致[cite: 1]
-    let db = JSON.parse(localStorage.getItem('nav_db')) || [];
-    let isEdit = false;
-    let tk = localStorage.getItem('nav_tk') || "";
-    let gid = localStorage.getItem('nav_gid') || "";
+    let db = [];
+    const FILE_NAME = "nav_cloud_db.json";[cite: 1]
 
-    // 格式化链接：去除多余空格，补全 http
-    function formatURL(url) {
+    // 解决“前缀”问题的关键函数
+    function cleanUrl(url) {
         url = url.trim();
-        if (!/^https?:\/\//i.test(url)) {
-            return 'https://' + url;
-        }
+        if (!/^https?:\/\//i.test(url)) return 'https://' + url;
         return url;
     }
 
-    function render() {
-        const grid = document.getElementById('main-grid');
-        grid.innerHTML = db.map((item, idx) => `
-            <div class="blogger-card">
-                ${isEdit ? `<input type="text" value="${item.name}" onchange="db[${idx}].name=this.value" style="width:100%; margin-bottom:10px;">` : `<h3 style="margin:0 0 10px 0">${item.name}</h3>`}
-                <div>
-                    ${item.links.map((l, lIdx) => isEdit ? `
-                        <div class="edit-unit">
-                            <input type="text" value="${l.label}" onchange="db[${idx}].links[${lIdx}].label=this.value">
-                            <input type="text" value="${l.url}" onchange="db[${idx}].links[${lIdx}].url=this.value">
-                            <span style="cursor:pointer;color:red" onclick="db[${idx}].links.splice(${lIdx},1);render()">[删]</span>
-                        </div>
-                    ` : `
-                        <a href="${formatURL(l.url)}" target="_blank" class="link-item">
-                            <b>${l.label}</b>
-                            <span style="color:#999;font-size:11px;">${l.url}</span>
-                        </a>
-                    `).join('')}
-                </div>
-                ${isEdit ? `<button class="btn btn-success" style="width:100%;margin-top:10px" onclick="saveAndSync()">保存同步</button>
-                            <button onclick="db.splice(${idx},1);render()" style="width:100%;margin-top:5px;border:none;background:none;color:#999;cursor:pointer">删除卡片</button>` : ''}
-            </div>
-        `).join('');
-    }
-
-    function saveConf() {
-        tk = document.getElementById('t-in').value.trim();
-        gid = document.getElementById('g-in').value.trim();
-        localStorage.setItem('nav_tk', tk);
-        localStorage.setItem('nav_gid', gid);
+    // 保存配置并尝试拉取
+    function saveConfig() {
+        localStorage.setItem('gh_token', document.getElementById('token').value);
+        localStorage.setItem('gh_gist', document.getElementById('gistId').value);
         pull();
     }
 
+    // 从云端拉取
     async function pull() {
-        const tag = document.getElementById('status-tag');
+        const tk = localStorage.getItem('gh_token');
+        const gid = localStorage.getItem('gh_gist');
+        const log = document.getElementById('log');
+        
         if(!tk || !gid) return;
+
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 headers: { 'Authorization': `token ${tk}` }
             });
             if(res.ok) {
-                const gist = await res.json();
-                if(gist.files[FILE_NAME]) {[cite: 1]
-                    const content = gist.files[FILE_NAME].content;[cite: 1]
-                    if(content && content !== "{}") {
-                        db = JSON.parse(content);
-                        localStorage.setItem('nav_db', JSON.stringify(db));
-                        render();
-                    }
-                }
-                tag.innerText = "已连接云端 ✅"; tag.className = "online";
-            } else { throw new Error(); }
-        } catch(e) {
-            tag.innerText = "连接失败 ❌"; tag.className = "offline";
-        }
+                const data = await res.json();
+                const content = data.files[FILE_NAME].content;[cite: 1]
+                db = JSON.parse(content || "[]");
+                render();
+                log.innerText = "状态：云端连接成功 ✅";
+                log.style.color = "green";
+            } else {
+                log.innerText = "状态：连接失败 (请检查Token和ID)";
+            }
+        } catch(e) { log.innerText = "状态：网络错误"; }
     }
 
-    async function saveAndSync() {
-        localStorage.setItem('nav_db', JSON.stringify(db));
-        const tag = document.getElementById('status-tag');
-        tag.innerText = "正在推送...";
+    // 同步到云端
+    async function push() {
+        const tk = localStorage.getItem('gh_token');
+        const gid = localStorage.getItem('gh_gist');
+        const log = document.getElementById('log');
+
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `token ${tk}` },
-                body: JSON.stringify({ files: { [FILE_NAME]: { content: JSON.stringify(db) } } })[cite: 1]
+                body: JSON.stringify({
+                    files: { [FILE_NAME]: { content: JSON.stringify(db) } }[cite: 1]
+                })
             });
             if(res.ok) {
-                tag.innerText = "同步成功 ✅";
+                log.innerText = "状态：同步成功 ✅";
                 render();
             } else {
                 const err = await res.json();
-                alert("同步失败：" + err.message + " (请检查Token权限)");
+                alert("同步失败：" + err.message);
             }
         } catch(e) { alert("网络异常"); }
     }
 
-    function addCard() {
-        const name = document.getElementById('nc-name').value;
-        const urls = document.getElementById('nc-urls').value.split('\n').filter(u=>u.trim());
-        db.push({ name, links: urls.map(u => ({ label: "链接", url: u.trim() })) });
-        saveAndSync();
-        document.getElementById('nc-name').value = "";
-        document.getElementById('nc-urls').value = "";
+    function addItem() {
+        const name = document.getElementById('siteName').value;
+        const url = document.getElementById('siteUrl').value;
+        if(!name || !url) return alert("请填满信息");
+        
+        db.push({ name, url: cleanUrl(url) }); // 自动清洗 URL
+        push();
     }
 
-    function toggleEdit(s) { isEdit = s; document.body.classList.toggle('panel-open', s); render(); }
+    function render() {
+        document.getElementById('list').innerHTML = db.map(item => `
+            <div class="card">
+                <strong>${item.name}</strong>
+                <a class="link" href="${item.url}" target="_blank">${item.url}</a>
+            </div>
+        `).join('');
+    }
 
+    // 页面加载时自动填入
     window.onload = () => {
-        document.getElementById('t-in').value = tk;
-        document.getElementById('g-in').value = gid;
+        document.getElementById('token').value = localStorage.getItem('gh_token') || "";
+        document.getElementById('gistId').value = localStorage.getItem('gh_gist') || "";
         pull();
-        render();
     };
 </script>
 </body>
