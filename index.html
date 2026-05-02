@@ -1,38 +1,41 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>Gist 同步调试版</title>
+    <title>Gist 书签漫游系统 - 稳定版</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; line-height: 1.6; max-width: 800px; margin: auto; background: #f9f9f9; }
-        .box { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        input { width: calc(100% - 22px); padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px; }
-        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        body { font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; line-height: 1.6; max-width: 600px; margin: auto; background: #f4f7f9; color: #333; }
+        .box { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); margin-bottom: 20px; }
+        h3 { margin-top: 0; color: #007bff; font-size: 18px; border-left: 4px solid #007bff; padding-left: 10px; }
+        input { width: calc(100% - 24px); padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        button { background: #007bff; color: white; border: none; padding: 12px 25px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; font-size: 14px; transition: 0.2s; }
         button:hover { background: #0056b3; }
-        #console { background: #333; color: #00ff00; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 12px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
-        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-bottom: 10px; }
+        #console { background: #282c34; color: #abb2bf; padding: 15px; border-radius: 6px; font-family: "Cascadia Code", Monaco, monospace; font-size: 12px; white-space: pre-wrap; max-height: 150px; overflow-y: auto; border: 1px solid #444; }
+        .link-card { border: 1px solid #eee; padding: 12px; border-radius: 8px; margin: 10px 0; background: #fafafa; display: flex; justify-content: space-between; align-items: center; }
+        .link-info b { display: block; color: #222; }
+        .link-info small { color: #888; word-break: break-all; }
+        .del-btn { color: #ff4d4f; cursor: pointer; font-size: 12px; border: 1px solid #ff4d4f; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h3>第一步：配置云端</h3>
-    <input type="password" id="token" placeholder="在此粘贴 Token (ghp_开头的那个)">
-    <input type="text" id="gistId" placeholder="在此粘贴 Gist ID (32位那串字符)">
-    <button onclick="initConnect()">连接并拉取数据</button>
+    <h3>1. 账户配置</h3>
+    <input type="password" id="token" placeholder="GitHub Token (ghp_...)">
+    <input type="text" id="gistId" placeholder="Gist ID (地址栏最后那一串)">
+    <button onclick="initConnect()">连接云端并拉取</button>
 </div>
 
 <div class="box" id="editor" style="display:none;">
-    <h3>第二步：添加数据</h3>
-    <input type="text" id="title" placeholder="网站名称">
-    <input type="text" id="url" placeholder="网址 (例如: jd.com)">
-    <button onclick="doSync()">同步到云端</button>
-    <hr>
-    <div id="list"></div>
+    <h3>2. 新增书签</h3>
+    <input type="text" id="title" placeholder="网站名称 (如: 百度)">
+    <input type="text" id="url" placeholder="网址 (如: baidu.com)">
+    <button onclick="addAndSync()">添加并同步到云端</button>
+    <div id="list" style="margin-top:20px;"></div>
 </div>
 
 <div class="box">
-    <h3>🕵️ 控制台日志 (如果没反应看这里)</h3>
+    <h3>3. 系统日志</h3>
     <div id="console">等待操作...</div>
 </div>
 
@@ -40,23 +43,26 @@
     const FILE_NAME = "nav_cloud_db.json";
     let db = [];
 
+    // 日志打印函数
     function log(msg, isError = false) {
         const con = document.getElementById('console');
         const time = new Date().toLocaleTimeString();
-        con.innerHTML += `<div style="color:${isError ? '#ff4d4f' : '#00ff00'}">[${time}] ${msg}</div>`;
+        const color = isError ? '#f85149' : '#7ee787';
+        con.innerHTML += `<div><span style="color:#888">[${time}]</span> <span style="color:${color}">${msg}</span></div>`;
         con.scrollTop = con.scrollHeight;
     }
 
+    // 初始化连接并拉取数据
     async function initConnect() {
         const tk = document.getElementById('token').value.trim();
         const gid = document.getElementById('gistId').value.trim();
         
-        if(!tk || !gid) return alert("请先填写 Token 和 ID");
+        if(!tk || !gid) return alert("请填写完整配置！");
         
         localStorage.setItem('nav_tk', tk);
         localStorage.setItem('nav_gid', gid);
         
-        log("🚀 开始尝试拉取云端数据...");
+        log("🔍 正在拉取云端数据...");
         
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
@@ -65,38 +71,51 @@
             
             if(res.ok) {
                 const data = await res.json();
-                if(data.files[FILE_NAME]) {
-                    db = JSON.parse(data.files[FILE_NAME].content || "[]");
+                const file = data.files[FILE_NAME];
+                
+                if(file) {
+                    const content = file.content;
+                    try {
+                        const parsed = JSON.parse(content || "[]");
+                        // 关键修复：确保 db 永远是数组，防止 .map 报错
+                        db = Array.isArray(parsed) ? parsed : [];
+                        if(!Array.isArray(parsed)) log("⚠️ 云端数据非数组，已重置格式", true);
+                    } catch(e) {
+                        db = [];
+                        log("⚠️ JSON解析失败，已初始化为空列表", true);
+                    }
+                    
                     document.getElementById('editor').style.display = 'block';
                     render();
-                    log("✅ 成功连接！已获取云端数据。");
+                    log("✅ 连接成功，数据已同步");
                 } else {
-                    log(`⚠️ 警告：Gist 中没找到 ${FILE_NAME} 文件，请检查文件名！`, true);
+                    log(`❌ 错误：Gist 中找不到文件 ${FILE_NAME}`, true);
                 }
             } else {
                 const err = await res.json();
-                log(`❌ 连接失败：${res.status} - ${err.message}`, true);
-                if(res.status === 401) log("💡 提示：可能是 Token 错了或已过期。");
-                if(res.status === 404) log("💡 提示：Gist ID 找不到，请确认 ID 是否正确。");
+                log(`❌ 连接失败: ${err.message}`, true);
             }
         } catch(e) {
-            log(`❌ 网络报错：${e.message}`, true);
+            log(`❌ 网络请求异常: ${e.message}`, true);
         }
     }
 
-    async function doSync() {
-        const name = document.getElementById('title').value;
-        const url = document.getElementById('url').value;
+    // 添加并同步
+    async function addAndSync() {
+        const name = document.getElementById('title').value.trim();
+        const rawUrl = document.getElementById('url').value.trim();
         const tk = localStorage.getItem('nav_tk');
         const gid = localStorage.getItem('nav_gid');
 
-        if(!name || !url) return alert("信息填全");
+        if(!name || !rawUrl) return alert("名称和网址不能为空");
 
-        // 自动补齐 https 防止前缀错误
-        const fullUrl = url.startsWith('http') ? url : 'https://' + url;
-        db.push({ name, url: fullUrl });
-
-        log("📤 正在同步到云端...");
+        // 自动补齐协议，解决“前缀”问题
+        const cleanUrl = rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl;
+        
+        // 先更新本地状态
+        db.push({ name, url: cleanUrl });
+        
+        log("📤 正在推送更新至 GitHub...");
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 method: 'PATCH',
@@ -107,28 +126,55 @@
             });
             
             if(res.ok) {
-                log("🎊 同步成功！GitHub 已更新。");
+                log("🎊 云端同步成功！");
                 render();
                 document.getElementById('title').value = "";
                 document.getElementById('url').value = "";
             } else {
                 const err = await res.json();
-                log(`❌ 同步失败：${err.message}`, true);
+                log(`❌ 同步失败: ${err.message}`, true);
+                db.pop(); // 同步失败则回滚本地数据
             }
-        } catch(e) { log(`❌ 同步异常：${e.message}`, true); }
+        } catch(e) {
+            log(`❌ 推送异常: ${e.message}`, true);
+        }
     }
 
+    // 删除功能
+    function deleteItem(index) {
+        if(confirm("确定删除该书签并同步到云端吗？")) {
+            db.splice(index, 1);
+            pushOnly();
+        }
+    }
+
+    async function pushOnly() {
+        const tk = localStorage.getItem('nav_tk');
+        const gid = localStorage.getItem('nav_gid');
+        await fetch(`https://api.github.com/gists/${gid}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `token ${tk}` },
+            body: JSON.stringify({ files: { [FILE_NAME]: { content: JSON.stringify(db) } } })
+        });
+        render();
+        log("🗑️ 已删除并完成同步");
+    }
+
+    // 渲染界面
     function render() {
         const list = document.getElementById('list');
-        list.innerHTML = db.map(i => `
-            <div style="border-bottom:1px solid #eee; padding:10px 0;">
-                <b>${i.name}</b> <br> 
-                <a href="${i.url}" target="_blank" style="font-size:12px; color:#999;">${i.url}</a>
+        list.innerHTML = db.map((i, idx) => `
+            <div class="link-card">
+                <div class="link-info">
+                    <b>${i.name}</b>
+                    <a href="${i.url}" target="_blank"><small>${i.url}</small></a>
+                </div>
+                <div class="del-btn" onclick="deleteItem(${idx})">删除</div>
             </div>
         `).join('');
     }
 
-    // 自动加载历史
+    // 自动加载配置
     window.onload = () => {
         const t = localStorage.getItem('nav_tk');
         const g = localStorage.getItem('nav_gid');
