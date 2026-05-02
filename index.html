@@ -2,185 +2,144 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>导航修复版 - 按钮强控</title>
+    <title>导航页 - 极简稳定版</title>
     <style>
-        :root { --primary: #007bff; }
-        body { font-family: system-ui, sans-serif; margin: 0; background: #f4f7f9; }
-        /* 内容区域 */
-        #content-wrapper { padding: 20px; margin-right: 0; transition: 0.3s; }
-        /* 侧边栏：初始状态由 JS 控制或默认隐藏 */
-        #side-panel { 
-            position: fixed; top: 0; right: -350px; width: 340px; height: 100%; 
-            background: #fff; box-shadow: -2px 0 10px rgba(0,0,0,0.1); 
-            transition: 0.3s; z-index: 1000; padding: 20px; box-sizing: border-box;
-            overflow-y: auto;
-        }
-        /* 当 body 有这个 class 时，侧边栏滑出 */
-        body.panel-active #side-panel { right: 0; }
-        body.panel-active #content-wrapper { margin-right: 340px; }
-
-        .card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        input, textarea { width: 100%; padding: 10px; margin: 5px 0 15px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-        button { cursor: pointer; padding: 10px 15px; border-radius: 4px; border: none; font-weight: bold; }
-        .btn-open { position: fixed; bottom: 20px; right: 20px; background: #333; color: white; z-index: 999; }
-        .btn-save { background: var(--primary); color: white; width: 100%; }
+        body { font-family: sans-serif; padding: 20px; background: #f0f2f5; line-height: 1.6; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section { border: 1px solid #eee; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        h3 { margin-top: 0; color: #333; }
+        input, textarea { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
+        button:hover { background: #0056b3; }
+        .card-list { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .card { border: 1px solid #ddd; padding: 10px; border-radius: 4px; }
+        .link-tag { display: inline-block; background: #e9ecef; padding: 2px 8px; margin: 2px; border-radius: 3px; font-size: 12px; text-decoration: none; color: #007bff; }
     </style>
 </head>
-<body class="panel-active"> <!-- 默认打开，方便你第一时间看到管理界面 -->
+<body>
 
-    <div id="content-wrapper">
-        <div id="main-grid">
-            <p style="text-align: center; color: #999;">连接成功后，卡片将在此显示</p>
-        </div>
+<div class="container">
+    <h2>🚀 导航管理面板</h2>
+    
+    <!-- 配置区 -->
+    <div class="section">
+        <h3>1. 配置云端</h3>
+        <input type="password" id="cfg_token" placeholder="GitHub Token (ghp_...)">
+        <input type="text" id="cfg_id" placeholder="Gist ID (那串长字符)">
+        <button onclick="loadData()">读取云端数据</button>
+        <p id="msg" style="font-size: 12px; color: blue;"></p>
     </div>
 
-    <!-- 侧边管理面板 -->
-    <div id="side-panel">
-        <h3 style="margin-top: 0;">⚙️ 管理中心</h3>
-        
-        <label>1. GitHub Token</label>
-        <input type="password" id="gh_token" placeholder="ghp_xxxxxxxxxxxx">
-        
-        <label>2. Gist ID (仅填 ID 部分)</label>
-        <input type="text" id="gh_gistid" placeholder="例如: 8f23xxx">
-        
-        <button class="btn-save" style="background: #333;" onclick="handleConnect()">连接并获取数据</button>
-        <div id="info-box" style="font-size: 12px; margin-top: 5px; color: blue;"></div>
-
-        <hr style="margin: 20px 0;">
-
-        <label>新分类名称</label>
-        <input type="text" id="newName" placeholder="如：我的工具">
-        <label>网址列表 (每行一个)</label>
-        <textarea id="newUrls" rows="5" placeholder="baidu.com"></textarea>
-        
-        <button class="btn-save" onclick="handleAddCard()">创建分类并同步到云端</button>
-        
-        <button style="width:100%; margin-top: 20px; background: #eee;" onclick="togglePanel(false)">关闭管理界面</button>
+    <!-- 添加区 -->
+    <div class="section">
+        <h3>2. 添加新分类</h3>
+        <input type="text" id="in_name" placeholder="分类名称 (如：生活常用)">
+        <textarea id="in_urls" rows="3" placeholder="输入网址，每行一个"></textarea>
+        <button style="background: #28a745;" onclick="saveData()">保存并同步到云端</button>
     </div>
 
-    <!-- 浮动打开按钮 -->
-    <button class="btn-open" onclick="togglePanel(true)">⚙️ 打开管理</button>
+    <!-- 显示区 -->
+    <div id="display-area" class="card-list"></div>
+</div>
 
 <script>
-    // --- 核心：界面控制逻辑（绝对不依赖任何外部数据） ---
-    function togglePanel(isOpen) {
-        if (isOpen) {
-            document.body.classList.add('panel-active');
-        } else {
-            document.body.classList.remove('panel-active');
-        }
-    }
+    // 强制声明变量
+    var GIST_FILE = "nav_cloud_db.json";[cite: 1]
+    var localData = [];
 
-    // --- 数据逻辑 ---
-    const FILE_NAME = "nav_cloud_db.json";[cite: 1]
-    let bloggers = [];
-
-    // 初始化：读取本地缓存的配置
+    // 页面加载时自动填入之前保存的信息
     window.onload = function() {
-        document.getElementById('gh_token').value = localStorage.getItem('gh_token') || '';
-        document.getElementById('gh_gistid').value = localStorage.getItem('gh_gistid') || '';
+        document.getElementById('cfg_token').value = localStorage.getItem('my_nav_token') || '';
+        document.getElementById('cfg_id').value = localStorage.getItem('my_nav_id') || '';
     };
 
-    async function handleConnect() {
-        const tk = document.getElementById('gh_token').value.trim();
-        const gid = document.getElementById('gh_gistid').value.trim();
-        const info = document.getElementById('info-box');
+    // 读取函数
+    async function loadData() {
+        var tk = document.getElementById('cfg_token').value.trim();
+        var id = document.getElementById('cfg_id').value.trim();
+        var msg = document.getElementById('msg');
 
-        if (!tk || !gid) return alert("请先填写 Token 和 ID");
-        
-        localStorage.setItem('gh_token', tk);
-        localStorage.setItem('gh_gistid', gid);
+        if(!tk || !id) return alert("请先填写配置！");
 
-        info.innerText = "正在尝试连接 GitHub...";
-        
+        localStorage.setItem('my_nav_token', tk);
+        localStorage.setItem('my_nav_id', id);
+        msg.innerText = "正在读取...";
+
         try {
-            const res = await fetch(`https://api.github.com/gists/${gid}`, {
-                headers: { 'Authorization': `token ${tk}` }
+            var res = await fetch("https://api.github.com/gists/" + id, {
+                headers: { "Authorization": "token " + tk }
             });
-
-            if (res.ok) {
-                const data = await res.json();
-                const content = data.files[FILE_NAME] ? data.files[FILE_NAME].content : "[]";[cite: 1]
-                
-                try {
-                    bloggers = JSON.parse(content);
-                    if (!Array.isArray(bloggers)) bloggers = [];
-                } catch(e) {
-                    bloggers = []; // 如果 JSON 格式不对，直接清空重来
-                }
-                
-                render();
-                info.style.color = "green";
-                info.innerText = "✅ 连接成功！数据已同步";
+            if(res.ok) {
+                var json = await res.json();
+                var content = json.files[GIST_FILE] ? json.files[GIST_FILE].content : "[]";[cite: 1]
+                localData = JSON.parse(content);
+                updateUI();
+                msg.innerText = "✅ 读取成功！";
             } else {
-                info.style.color = "red";
-                info.innerText = "❌ 连接失败 (错误码: " + res.status + ")";
+                msg.innerText = "❌ 错误：" + res.status;
             }
-        } catch (err) {
-            info.style.color = "red";
-            info.innerText = "❌ 网络请求被拦截或出错";
+        } catch(e) {
+            msg.innerText = "❌ 网络连接异常";
         }
     }
 
-    async function handleAddCard() {
-        const name = document.getElementById('newName').value.trim();
-        const urls = document.getElementById('newUrls').value.trim().split('\n');
-        const tk = localStorage.getItem('gh_token');
-        const gid = localStorage.getItem('gh_gistid');
+    // 保存函数
+    async function saveData() {
+        var name = document.getElementById('in_name').value.trim();
+        var urls = document.getElementById('in_urls').value.trim().split('\n');
+        var tk = localStorage.getItem('my_nav_token');
+        var id = localStorage.getItem('my_nav_id');
 
-        if (!name || !tk) return alert("请确认标题已填写且已连接成功");
+        if(!name || !tk) return alert("请输入名称并确保已连接云端");
 
-        const newLinks = urls.filter(u => u.trim()).map(u => {
-            let addr = u.trim();
-            if (!addr.startsWith('http')) addr = 'https://' + addr;
-            return { url: addr };
-        });
+        var links = [];
+        for(var i=0; i<urls.length; i++) {
+            var u = urls[i].trim();
+            if(u) {
+                if(!u.startsWith('http')) u = 'https://' + u;
+                links.push({url: u});
+            }
+        }
 
-        bloggers.push({ name: name, links: newLinks });
+        localData.push({name: name, links: links});
 
         try {
-            const res = await fetch(`https://api.github.com/gists/${gid}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `token ${tk}` },
-                body: JSON.stringify({
-                    files: { [FILE_NAME]: { content: JSON.stringify(bloggers) } }[cite: 1]
-                })
+            var body = { files: {} };
+            body.files[GIST_FILE] = { content: JSON.stringify(localData) };[cite: 1]
+            
+            var res = await fetch("https://api.github.com/gists/" + id, {
+                method: "PATCH",
+                headers: { "Authorization": "token " + tk },
+                body: JSON.stringify(body)
             });
-            if (res.ok) {
-                render();
-                alert("已成功保存并同步到云端！");
-                document.getElementById('newName').value = "";
-                document.getElementById('newUrls').value = "";
+
+            if(res.ok) {
+                updateUI();
+                alert("同步成功！");
+                document.getElementById('in_name').value = "";
+                document.getElementById('in_urls').value = "";
             }
-        } catch (e) {
-            alert("同步失败，请检查网络");
+        } catch(e) {
+            alert("同步失败");
         }
     }
 
-    function render() {
-        const grid = document.getElementById('main-grid');
-        if (bloggers.length === 0) {
-            grid.innerHTML = '<p style="text-align: center; color: #999;">暂无数据，请创建分类</p>';
-            return;
-        }
-        grid.innerHTML = bloggers.map((b, i) => `
-            <div class="card">
-                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:8px; margin-bottom:10px;">
-                    <strong>${b.name}</strong>
-                    <button onclick="deleteCard(${i})" style="font-size:10px; background:#ff4d4f; color:white; padding:2px 5px;">删除</button>
-                </div>
-                ${(b.links || []).map(l => `<a href="${l.url}" target="_blank" style="display:block; padding:5px; font-size:13px; color:#444; text-decoration:none; background:#f9f9f9; margin-bottom:5px; border-radius:4px;">${l.url}</a>`).join('')}
-            </div>
-        `).join('');
-    }
-
-    function deleteCard(i) {
-        if (confirm("确定要删除这个分类吗？")) {
-            bloggers.splice(i, 1);
-            handleAddCard(); // 借用保存逻辑来更新云端
+    // 更新界面
+    function updateUI() {
+        var area = document.getElementById('display-area');
+        area.innerHTML = "";
+        for(var i=0; i<localData.length; i++) {
+            var item = localData[i];
+            var html = '<div class="card"><strong>' + item.name + '</strong><br>';
+            for(var j=0; j<item.links.length; j++) {
+                var l = item.links[j];
+                html += '<a class="link-tag" href="' + l.url + '" target="_blank">链接</a>';
+            }
+            html += '</div>';
+            area.innerHTML += html;
         }
     }
 </script>
+
 </body>
 </html>
