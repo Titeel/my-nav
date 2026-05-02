@@ -2,283 +2,150 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>云端聚合导航 - 卡片编辑版</title>
+    <title>聚合导航 - 强力兼容版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
-        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; }
-        
-        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; box-sizing: border-box; }
+        body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); display: flex; }
+        #content-wrapper { flex: 1; padding: 40px; transition: margin-right 0.3s ease; }
         body.admin-open #content-wrapper { margin-right: 340px; }
-
-        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
-        
-        .blogger-card { 
-            width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
-            border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box; height: fit-content;
-        }
-        .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
-
-        .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-        .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 85%; }
-        
-        .link-group { display: flex; flex-direction: column; gap: 10px; }
-        .link-item-vertical {
-            display: flex; flex-direction: column; padding: 10px 15px; background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; cursor: pointer; transition: 0.2s; text-decoration: none;
-        }
-        .link-item-vertical:hover { border-color: var(--primary-color); background: #fdfdfd; }
-        .link-label-text { font-size: 13px; font-weight: bold; color: #333; margin-bottom: 4px; }
-        .link-url-text { font-size: 11px; color: #999; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* 编辑状态 UI */
-        .edit-unit { position: relative; width: 100%; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin-bottom: 8px; box-sizing: border-box; }
-        .tag-name-input { border: none; font-weight: bold; width: 90%; outline: none; font-size: 13px; margin-bottom: 4px; border-bottom: 1px dashed #eee; padding-bottom: 4px; }
-        .url-input { border: none; width: 100%; font-size: 11px; color: #888; outline: none; padding-top: 4px; }
-        
-        .remove-link-btn { position: absolute; top: 8px; right: 8px; color: #ccc; cursor: pointer; font-size: 16px; line-height: 1; }
-        .remove-link-btn:hover { color: var(--danger-color); }
-
-        .add-item-btn { 
-            width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); 
-            background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold;
-        }
-
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; overflow-y: auto; }
+        #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 320px); gap: 20px; justify-content: center; }
+        .blogger-card { width: 320px; background: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); padding: 15px; border: 1px solid #eee; height: fit-content; }
+        .name-row { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 5px; }
+        .link-item { display: block; padding: 8px 12px; margin: 5px 0; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #333; font-size: 14px; border: 1px solid transparent; }
+        .link-item:hover { border-color: var(--primary-color); background: #fff; }
+        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 20px; box-sizing: border-box; overflow-y: auto; visibility: hidden; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
-        
-        #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; display: flex; gap: 10px; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 24px; border-radius: 30px; cursor: pointer; font-size: 14px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-        
-        .input-style { width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; box-sizing: border-box; }
-        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
-        .action-btns { margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee; display: flex; flex-direction: column; gap: 8px; }
-        .btn-base { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; font-size: 13px; }
-        .btn-save { background: var(--success-color); color: white; }
-        .btn-undo { background: #6c757d; color: white; }
-        .btn-del-init { background: #f5f5f5; color: #999; }
-        .confirm-zone { display: none; gap: 8px; }
-        .feedback-text { text-align: center; color: var(--success-color); font-size: 12px; margin-top: 8px; min-height: 18px; font-family: monospace; }
+        .input-style { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .btn-action { width: 100%; padding: 10px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: 10px; }
+        #float-tools { position: fixed; bottom: 20px; right: 20px; }
+        .btn-trigger { background: #333; color: #fff; border: none; padding: 12px 20px; border-radius: 25px; cursor: pointer; }
     </style>
 </head>
-<body class="admin-open"> <!-- 默认打开管理面板以便配置 -->
+<body class="admin-open">
 
     <div id="content-wrapper">
         <div id="main-grid"></div>
     </div>
 
     <div id="side-admin-panel">
-        <h2 style="margin-top:0">管理中心</h2>
-        
-        <!-- 云端配置区 -->
-        <div style="background: #fdf2f2; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #ffe3e3;">
-            <div style="font-size:12px; font-weight:bold; color:#d93025; margin-bottom:10px;">☁️ Gist 云端同步配置</div>
-            <input type="password" id="gh_token" class="input-style" placeholder="GitHub Token (ghp_...)">
+        <h3>⚙️ 管理中心</h3>
+        <div style="background:#fff4f4; padding:10px; border-radius:8px; margin-bottom:15px; font-size:12px; border:1px solid #ffecec;">
+            <strong>1. 配置云端</strong>
+            <input type="password" id="gh_token" class="input-style" placeholder="GitHub Token">
             <input type="text" id="gh_gistid" class="input-style" placeholder="Gist ID">
-            <button class="btn-action" style="background:#333; color:white;" onclick="initConnect()">连接并拉取云端数据</button>
-            <div id="sync-feedback" class="feedback-text"></div>
+            <button class="btn-action" style="background:#333; color:white;" onclick="initConnect()">连接并拉取</button>
+            <div id="log" style="color:green; margin-top:5px; font-weight:bold;"></div>
         </div>
-
-        <hr style="border:0; border-top:1px solid #eee; margin:20px 0">
         
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">新卡片名称</div>
-        <input type="text" id="newName" class="input-style" placeholder="例如：社交媒体">
-        <div style="font-size:13px; color:#666; margin-bottom:8px;">初始链接（每行一个）</div>
-        <textarea id="newUrls" class="input-style" placeholder="baidu.com&#10;jd.com" style="height:100px; resize:none;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" id="add-btn">确认创建卡片并同步</button>
-        <button class="btn-action" style="background:#f5f5f5; color:#666;" id="close-admin-btn">收起管理面板</button>
+        <hr>
+        <strong>2. 创建卡片分类</strong>
+        <input type="text" id="newName" class="input-style" placeholder="卡片标题 (如: 常用工具)">
+        <textarea id="newUrls" class="input-style" style="height:80px;" placeholder="网址 (每行一个)"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" onclick="addCard()">确认创建并同步</button>
+        <button class="btn-action" style="background:#eee; color:#666;" onclick="toggleAdmin(false)">收起面板</button>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" id="master-admin-btn">⚙️ 管理中心</button>
+        <button class="btn-trigger" onclick="toggleAdmin(true)">⚙️ 管理面板</button>
     </div>
 
 <script>
     const FILE_NAME = "nav_cloud_db.json";[cite: 1]
     let bloggers = [];
-    let isAdminMode = true;
 
-    document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('master-admin-btn').onclick = () => toggleAdmin(true);
-        document.getElementById('close-admin-btn').onclick = () => toggleAdmin(false);
-        document.getElementById('add-btn').onclick = addBlogger;
-        
-        // 自动回显保存的配置
+    // 初始化加载
+    window.onload = () => {
         document.getElementById('gh_token').value = localStorage.getItem('gh_token') || '';
         document.getElementById('gh_gistid').value = localStorage.getItem('gh_gistid') || '';
-        
-        if(localStorage.getItem('gh_token') && localStorage.getItem('gh_gistid')) {
-            initConnect();
-        }
-    });
+        if(localStorage.getItem('gh_token') && localStorage.getItem('gh_gistid')) initConnect();
+    };
 
-    // --- 云端核心逻辑 ---
     async function initConnect() {
         const tk = document.getElementById('gh_token').value.trim();
         const gid = document.getElementById('gh_gistid').value.trim();
-        const fb = document.getElementById('sync-feedback');
+        const logEl = document.getElementById('log');
         
         if(!tk || !gid) return;
         localStorage.setItem('gh_token', tk);
         localStorage.setItem('gh_gistid', gid);
 
-        fb.innerText = "⏳ 正在同步...";
+        logEl.innerText = "⏳ 连接中...";
         try {
             const res = await fetch(`https://api.github.com/gists/${gid}`, {
                 headers: { 'Authorization': `token ${tk}` }
             });
             if(res.ok) {
                 const data = await res.json();
-                const content = data.files[FILE_NAME]?.content;[cite: 1]
-                const parsed = JSON.parse(content || "[]");
-                bloggers = Array.isArray(parsed) ? parsed : [];
+                const content = data.files[FILE_NAME]?.content || "[]";[cite: 1]
+                let parsed = JSON.parse(content);
+                
+                // --- 强力兼容逻辑：确保格式为 [ {name, links:[]} ] ---
+                if (Array.isArray(parsed) && parsed.length > 0 && !parsed[0].links) {
+                    bloggers = [{ name: "未分类导入", links: parsed }];
+                } else {
+                    bloggers = Array.isArray(parsed) ? parsed : [];
+                }
+                
                 render();
-                fb.innerText = "✅ 云端数据加载成功";
-                fb.style.color = "var(--success-color)";
-            } else {
-                fb.innerText = "❌ 连接失败，请检查配置";
-                fb.style.color = "var(--danger-color)";
-            }
-        } catch(e) {
-            fb.innerText = "❌ 网络异常";
-        }
+                logEl.innerText = "✅ 连接成功";
+            } else { logEl.innerText = "❌ ID或Token错误"; }
+        } catch(e) { logEl.innerText = "❌ 网络请求失败"; }
     }
 
-    async function pushToCloud() {
+    async function sync() {
         const tk = localStorage.getItem('gh_token');
         const gid = localStorage.getItem('gh_gistid');
-        const fb = document.getElementById('sync-feedback');
-        if(!tk || !gid) return;
-
         try {
-            const res = await fetch(`https://api.github.com/gists/${gid}`, {
+            await fetch(`https://api.github.com/gists/${gid}`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `token ${tk}` },
-                body: JSON.stringify({
-                    files: { [FILE_NAME]: { content: JSON.stringify(bloggers) } }[cite: 1]
-                })
+                body: JSON.stringify({ files: { [FILE_NAME]: { content: JSON.stringify(bloggers) } } })[cite: 1]
             });
-            if(res.ok) {
-                fb.innerText = "✅ 云端同步完成";
-                setTimeout(() => fb.innerText = "", 2000);
-            }
-        } catch(e) { fb.innerText = "❌ 同步至云端失败"; }
+            render();
+        } catch(e) { alert("同步失败"); }
     }
 
-    // --- 页面交互逻辑 ---
-    function getAutoLabel(url) {
-        if (url.includes('weibo.com')) return "微博主页";
-        if (url.includes('douyin.com')) return "抖音账号";
-        if (url.includes('bilibili.com')) return "B站账号";
-        return "新链接";
+    function addCard() {
+        const name = document.getElementById('newName').value.trim();
+        const urls = document.getElementById('newUrls').value.trim().split('\n');
+        if(!name) return alert("标题不能为空");
+        
+        let links = urls.filter(u => u.trim()).map(u => {
+            let fullUrl = u.trim();
+            if(!/^https?:\/\//i.test(fullUrl)) fullUrl = 'https://' + fullUrl;
+            return { label: "快捷访问", url: fullUrl };
+        });
+
+        bloggers.push({ name, links });
+        sync();
+        document.getElementById('newName').value = '';
+        document.getElementById('newUrls').value = '';
+    }
+
+    function removeCard(i) {
+        if(confirm("确定删除此卡片？")) {
+            bloggers.splice(i, 1);
+            sync();
+        }
     }
 
     function render() {
         const grid = document.getElementById('main-grid');
         grid.innerHTML = bloggers.map((b, i) => `
-            <div class="blogger-card ${isAdminMode ? 'edit-mode-active' : ''}">
+            <div class="blogger-card">
                 <div class="name-row">
-                    <input type="text" class="blogger-name-input" value="${b.name}" ${!isAdminMode ? 'readonly' : ''} onchange="updateBloggerName(${i}, this.value)">
+                    ${b.name} 
+                    <span style="color:red; font-size:12px; cursor:pointer; float:right" onclick="removeCard(${i})">删除</span>
                 </div>
-                <div class="link-group" id="link-group-${i}">
-                    ${b.links.map((link, j) => renderItem(link, i, j)).join('')}
+                <div>
+                    ${b.links.map(l => `<a href="${l.url}" target="_blank" class="link-item">${l.url.replace('https://','')}</a>`).join('')}
                 </div>
-                ${isAdminMode ? `
-                <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增一条链接</button>
-                <div class="action-btns">
-                    <div id="normalBtns-${i}" style="display:flex; gap:8px">
-                        <button class="btn-base btn-del-init" onclick="showConfirm(${i}, true)">删除卡片</button>
-                        <button class="btn-base btn-save" onclick="saveCardChanges(${i})">保存此卡片</button>
-                    </div>
-                    <div id="confirmZone-${i}" class="confirm-zone">
-                        <button class="btn-base btn-undo" style="flex:1" onclick="showConfirm(${i}, false)">取消</button>
-                        <button class="btn-base" style="flex:1; background:var(--danger-color); color:white" onclick="removeBlogger(${i})">确认删除</button>
-                    </div>
-                    <div id="card-fb-${i}" class="feedback-text"></div>
-                </div>` : ''}
-            </div>`).join('');
-    }
-
-    function renderItem(link, cardIdx, linkIdx) {
-        if (!isAdminMode) {
-            return `
-            <a href="${link.url}" target="_blank" class="link-item-vertical">
-                <span class="link-label-text">${link.label}</span>
-                <span class="link-url-text">${link.url}</span>
-            </a>`;
-        }
-        return `
-        <div class="edit-unit" data-link-idx="${linkIdx}">
-            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" value="${link.label}">
-            <input type="text" class="url-input" value="${link.url}">
-        </div>`;
+            </div>
+        `).join('');
     }
 
     function toggleAdmin(show) {
-        isAdminMode = show;
         document.body.classList.toggle('admin-open', show);
-        render();
-    }
-
-    function addBlogger() {
-        const name = document.getElementById('newName').value.trim();
-        const rawText = document.getElementById('newUrls').value.trim();
-        if (!name) return alert("请输入卡片名称");
-        
-        const rawItems = rawText.split(/[\s\n,]+/).filter(item => item.trim().length > 0);
-        let validLinks = [];
-        rawItems.forEach(item => {
-            let url = item.trim();
-            if (!url.includes('.')) return;
-            if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-            validLinks.push({ url, label: getAutoLabel(url) });
-        });
-        
-        bloggers.push({ name, links: validLinks });
-        render();
-        pushToCloud();
-        document.getElementById('newName').value = '';
-        document.getElementById('newUrls').value = '';
-    }
-
-    function saveCardChanges(index) {
-        const card = document.querySelectorAll('.blogger-card')[index];
-        const newName = card.querySelector('.blogger-name-input').value.trim();
-        const units = card.querySelectorAll('.edit-unit');
-        let newLinks = [];
-        units.forEach(u => {
-            const l = u.querySelector('.tag-name-input').value.trim();
-            const url = u.querySelector('.url-input').value.trim();
-            if(url) {
-                const cleanUrl = url.startsWith('http') ? url : 'https://' + url;
-                newLinks.push({ url: cleanUrl, label: l || "新链接" });
-            }
-        });
-        bloggers[index] = { name: newName, links: newLinks };
-        pushToCloud();
-        render();
-    }
-
-    function removeBlogger(i) {
-        bloggers.splice(i, 1);
-        pushToCloud();
-        render();
-    }
-
-    function showConfirm(index, isDeleting) {
-        document.getElementById(`normalBtns-${index}`).style.display = isDeleting ? 'none' : 'flex';
-        document.getElementById(`confirmZone-${index}`).style.display = isDeleting ? 'flex' : 'none';
-    }
-
-    function addNewLinkLine(cardIdx) {
-        const group = document.getElementById(`link-group-${cardIdx}`);
-        const div = document.createElement('div');
-        div.className = 'edit-unit';
-        div.innerHTML = `
-            <span class="remove-link-btn" onclick="this.parentElement.remove()">×</span>
-            <input type="text" class="tag-name-input" placeholder="链接标题">
-            <input type="text" class="url-input" placeholder="网址">
-        `;
-        group.appendChild(div);
     }
 </script>
 </body>
