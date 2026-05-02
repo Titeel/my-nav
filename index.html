@@ -2,230 +2,166 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 终极修复版</title>
+    <title>聚合导航 - 深度修复版</title>
     <style>
         :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; --header-height: 65px; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); padding-top: var(--header-height); }
-        
-        /* 顶部导航 */
-        #config-header { 
-            background: #fff; border-bottom: 1px solid #ddd; padding: 0 20px; height: var(--header-height);
-            display: flex; align-items: center; justify-content: space-between; 
-            position: fixed; top: 0; left: 0; right: 0; z-index: 2000; 
-        }
-        #config-display { font-size: 13px; color: #666; display: flex; align-items: center; gap: 10px; }
-        #status-tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #eee; }
+        #config-header { background: #fff; border-bottom: 1px solid #ddd; padding: 0 20px; height: var(--header-height); display: flex; align-items: center; justify-content: space-between; position: fixed; top: 0; left: 0; right: 0; z-index: 2000; }
+        #status-tag { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; background: #eee; margin-left: 10px; }
         .online { background: #e6fffa !important; color: var(--success-color); }
         .offline { background: #fff1f0 !important; color: var(--danger-color); }
-
-        /* 内容布局 */
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 320px); gap: 20px; padding: 20px; justify-content: center; }
         .blogger-card { background: #fff; border-radius: 12px; padding: 15px; border: 1px solid #eee; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .edit-active { border: 2px solid var(--primary-color); }
-
-        /* 链接样式 */
-        .link-item { display: block; padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px; }
-        .link-item:hover { background: #e9ecef; }
-        .link-item b { display: block; color: #000; margin-bottom: 2px; }
-        .link-item span { font-size: 11px; color: #999; }
-
-        /* 编辑表单 */
+        .link-item { display: block; padding: 10px; margin: 5px 0; background: #f8f9fa; border-radius: 6px; text-decoration: none; color: #333; font-size: 13px; border: 1px solid transparent; }
+        .link-item:hover { border-color: var(--primary-color); background: #fff; }
         .edit-unit { background: #f1f3f5; padding: 8px; border-radius: 6px; margin-bottom: 8px; position: relative; }
-        .remove-btn { position: absolute; top: 2px; right: 5px; cursor: pointer; color: #999; }
-        .edit-unit input { width: 90%; border: 1px solid #ddd; padding: 4px; margin: 2px 0; border-radius: 4px; font-size: 12px; }
-
-        /* 侧边栏 */
         #admin-panel { position: fixed; top: var(--header-height); right: -350px; width: 320px; height: 100%; background: #fff; box-shadow: -5px 0 15px rgba(0,0,0,0.1); transition: 0.3s; z-index: 1500; padding: 20px; }
         body.panel-open #admin-panel { right: 0; }
-
-        /* 配置弹窗 */
-        #popup { position: fixed; top: 80px; right: 20px; background: #fff; border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); display: none; z-index: 2500; width: 280px; }
-        
         .btn { border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
         .btn-primary { background: var(--primary-color); color: #fff; }
         .btn-success { background: var(--success-color); color: #fff; }
-        .btn-dark { background: #333; color: #fff; }
     </style>
 </head>
 <body>
 
 <div id="config-header">
-    <div id="config-display">
-        <span>Gist: <b id="gist-id-label">未设置</b></span>
-        <span id="status-tag">检查中...</span>
-        <button class="btn btn-success" onclick="fetchCloudData()">🔄 强制拉取云端</button>
+    <div style="display:flex; align-items:center;">
+        <span style="font-size:14px; color:#666;">云端状态:</span>
+        <span id="status-tag">未检测</span>
+        <button class="btn btn-success" style="margin-left:15px; font-size:11px;" onclick="pull()">从云端拉取</button>
     </div>
-    <button class="btn btn-dark" onclick="togglePopup()">⚙️ 配置 Token/ID</button>
-</div>
-
-<div id="popup">
-    <h4 style="margin:0 0 10px 0">GitHub 配置</h4>
-    <input type="password" id="token-in" placeholder="GitHub Token (ghp_...)" style="width:100%; margin-bottom:10px; padding:8px; box-sizing:border-box;">
-    <input type="text" id="gist-in" placeholder="Gist ID" style="width:100%; margin-bottom:10px; padding:8px; box-sizing:border-box;">
-    <button class="btn btn-primary" style="width:100%" onclick="saveSettings()">确认并连接</button>
+    <div>
+        <input type="password" id="t-in" placeholder="Token" style="padding:5px; width:120px;">
+        <input type="text" id="g-in" placeholder="Gist ID" style="padding:5px; width:120px;">
+        <button class="btn btn-primary" onclick="saveConf()">保存配置</button>
+    </div>
 </div>
 
 <div id="main-grid"></div>
 
 <div id="admin-panel">
-    <h3>添加新卡片</h3>
-    <input type="text" id="new-card-name" placeholder="标题（如：我的博客）" style="width:100%; padding:8px; margin-bottom:10px;">
-    <textarea id="new-card-urls" placeholder="粘贴网址（一行一个）" style="width:100%; height:100px; padding:8px; margin-bottom:10px;"></textarea>
-    <button class="btn btn-primary" style="width:100%" onclick="createNewCard()">立即创建</button>
+    <h3>管理中心</h3>
+    <input type="text" id="nc-name" placeholder="标题" style="width:100%; padding:8px; margin-bottom:10px;">
+    <textarea id="nc-urls" placeholder="每行一个网址" style="width:100%; height:100px; padding:8px; margin-bottom:10px;"></textarea>
+    <button class="btn btn-primary" style="width:100%" onclick="addCard()">创建并同步</button>
     <hr>
-    <button class="btn" style="width:100%" onclick="toggleAdmin(false)">关闭面板</button>
+    <button class="btn" style="width:100%" onclick="toggleEdit(false)">退出编辑模式</button>
 </div>
 
-<div style="position:fixed; bottom:20px; right:20px; z-index:1000;">
-    <button id="admin-toggle-btn" class="btn btn-dark" style="padding:15px 25px; border-radius:50px; box-shadow:0 4px 12px rgba(0,0,0,0.2);" onclick="toggleAdmin(true)">⚙️ 进入管理模式</button>
+<div style="position:fixed; bottom:20px; right:20px;">
+    <button class="btn" style="background:#333; color:#fff; padding:15px; border-radius:50px;" onclick="toggleEdit(true)">⚙️ 管理卡片</button>
 </div>
 
 <script>
-    // 关键变量：必须和你截图里的文件名一致
-    const FILE_NAME = "nav_cloud_db.json"; 
+    const FILE_NAME = "nav_cloud_db.json"; // 必须与 GitHub 一致[cite: 1]
+    let db = JSON.parse(localStorage.getItem('nav_db')) || [];
+    let isEdit = false;
+    let tk = localStorage.getItem('nav_tk') || "";
+    let gid = localStorage.getItem('nav_gid') || "";
 
-    let data = JSON.parse(localStorage.getItem('my_nav_data')) || [];
-    let isEditMode = false;
-    let token = localStorage.getItem('my_gh_token') || "";
-    let gistId = localStorage.getItem('my_gist_id') || "";
-
-    // 初始化加载
-    window.onload = () => {
-        document.getElementById('gist-id-label').innerText = gistId || "无";
-        document.getElementById('token-in').value = token;
-        document.getElementById('gist-in').value = gistId;
-        if(token && gistId) fetchCloudData();
-        render();
-    };
-
-    function togglePopup() {
-        const p = document.getElementById('popup');
-        p.style.display = p.style.display === 'block' ? 'none' : 'block';
-    }
-
-    function toggleAdmin(show) {
-        isEditMode = show;
-        document.body.classList.toggle('panel-open', show);
-        render();
-    }
-
-    function saveSettings() {
-        token = document.getElementById('token-in').value.trim();
-        gistId = document.getElementById('gist-in').value.trim();
-        localStorage.setItem('my_gh_token', token);
-        localStorage.setItem('my_gist_id', gistId);
-        document.getElementById('gist-id-label').innerText = gistId;
-        togglePopup();
-        fetchCloudData();
-    }
-
-    // 从云端获取数据[cite: 1]
-    async function fetchCloudData() {
-        const tag = document.getElementById('status-tag');
-        tag.innerText = "同步中...";
-        try {
-            const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                headers: { 'Authorization': `token ${token}` }
-            });
-            if (res.ok) {
-                const gist = await res.json();
-                if (gist.files[FILE_NAME]) {
-                    const content = gist.files[FILE_NAME].content;
-                    if(content && content !== "{}") {
-                        data = JSON.parse(content);
-                        localStorage.setItem('my_nav_data', JSON.stringify(data));
-                        render();
-                    }
-                }
-                tag.innerText = "已连接云端 ✅";
-                tag.className = "online";
-            } else { throw new Error("Token或ID错误"); }
-        } catch (e) {
-            tag.innerText = "连接失败 ❌";
-            tag.className = "offline";
+    // 格式化链接：去除多余空格，补全 http
+    function formatURL(url) {
+        url = url.trim();
+        if (!/^https?:\/\//i.test(url)) {
+            return 'https://' + url;
         }
-    }
-
-    // 同步到云端[cite: 1]
-    async function pushToCloud() {
-        if(!token || !gistId) return;
-        try {
-            const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                method: 'PATCH',
-                headers: { 'Authorization': `token ${token}` },
-                body: JSON.stringify({
-                    files: { [FILE_NAME]: { content: JSON.stringify(data) } }
-                })
-            });
-            return res.ok;
-        } catch (e) {
-            alert("同步出错：" + e.message);
-            return false;
-        }
+        return url;
     }
 
     function render() {
         const grid = document.getElementById('main-grid');
-        grid.innerHTML = data.map((item, idx) => `
-            <div class="blogger-card ${isEditMode ? 'edit-active' : ''}">
-                ${isEditMode ? 
-                    `<input type="text" value="${item.name}" onchange="updateName(${idx}, this.value)" style="width:100%; font-weight:bold; margin-bottom:10px;">` : 
-                    `<h3 style="margin:0 0 10px 0">${item.name}</h3>`
-                }
-                <div id="links-${idx}">
-                    ${item.links.map((l, lIdx) => isEditMode ? `
+        grid.innerHTML = db.map((item, idx) => `
+            <div class="blogger-card">
+                ${isEdit ? `<input type="text" value="${item.name}" onchange="db[${idx}].name=this.value" style="width:100%; margin-bottom:10px;">` : `<h3 style="margin:0 0 10px 0">${item.name}</h3>`}
+                <div>
+                    ${item.links.map((l, lIdx) => isEdit ? `
                         <div class="edit-unit">
-                            <span class="remove-btn" onclick="removeLink(${idx}, ${lIdx})">×</span>
-                            <input type="text" value="${l.label}" onchange="updateLinkLabel(${idx}, ${lIdx}, this.value)">
-                            <input type="text" value="${l.url}" onchange="updateLinkUrl(${idx}, ${lIdx}, this.value)">
+                            <input type="text" value="${l.label}" onchange="db[${idx}].links[${lIdx}].label=this.value">
+                            <input type="text" value="${l.url}" onchange="db[${idx}].links[${lIdx}].url=this.value">
+                            <span style="cursor:pointer;color:red" onclick="db[${idx}].links.splice(${lIdx},1);render()">[删]</span>
                         </div>
                     ` : `
-                        <a href="${l.url}" target="_blank" class="link-item">
+                        <a href="${formatURL(l.url)}" target="_blank" class="link-item">
                             <b>${l.label}</b>
-                            <span>${l.url}</span>
+                            <span style="color:#999;font-size:11px;">${l.url}</span>
                         </a>
                     `).join('')}
                 </div>
-                ${isEditMode ? `
-                    <button class="btn btn-success" style="width:100%; margin-top:10px;" onclick="saveAndSync(${idx}, this)">保存并同步云端</button>
-                    <button class="btn" style="width:100%; margin-top:5px; background:#eee; color:#666;" onclick="deleteCard(${idx})">删除此卡片</button>
-                ` : ''}
+                ${isEdit ? `<button class="btn btn-success" style="width:100%;margin-top:10px" onclick="saveAndSync()">保存同步</button>
+                            <button onclick="db.splice(${idx},1);render()" style="width:100%;margin-top:5px;border:none;background:none;color:#999;cursor:pointer">删除卡片</button>` : ''}
             </div>
         `).join('');
     }
 
-    // 逻辑函数
-    function updateName(i, val) { data[i].name = val; }
-    function updateLinkLabel(i, li, val) { data[i].links[li].label = val; }
-    function updateLinkUrl(i, li, val) { data[i].links[li].url = val; }
-    function removeLink(i, li) { data[i].links.splice(li, 1); render(); }
-    function deleteCard(i) { if(confirm("确定删除整个卡片吗？")) { data.splice(i, 1); render(); } }
+    function saveConf() {
+        tk = document.getElementById('t-in').value.trim();
+        gid = document.getElementById('g-in').value.trim();
+        localStorage.setItem('nav_tk', tk);
+        localStorage.setItem('nav_gid', gid);
+        pull();
+    }
 
-    async function saveAndSync(idx, btn) {
-        btn.innerText = "正在同步...";
-        localStorage.setItem('my_nav_data', JSON.stringify(data));
-        const success = await pushToCloud();
-        if(success) {
-            btn.innerText = "同步成功 ✅";
-            setTimeout(() => { btn.innerText = "保存并同步云端"; }, 2000);
-        } else {
-            btn.innerText = "失败，重试";
+    async function pull() {
+        const tag = document.getElementById('status-tag');
+        if(!tk || !gid) return;
+        try {
+            const res = await fetch(`https://api.github.com/gists/${gid}`, {
+                headers: { 'Authorization': `token ${tk}` }
+            });
+            if(res.ok) {
+                const gist = await res.json();
+                if(gist.files[FILE_NAME]) {[cite: 1]
+                    const content = gist.files[FILE_NAME].content;[cite: 1]
+                    if(content && content !== "{}") {
+                        db = JSON.parse(content);
+                        localStorage.setItem('nav_db', JSON.stringify(db));
+                        render();
+                    }
+                }
+                tag.innerText = "已连接云端 ✅"; tag.className = "online";
+            } else { throw new Error(); }
+        } catch(e) {
+            tag.innerText = "连接失败 ❌"; tag.className = "offline";
         }
     }
 
-    function createNewCard() {
-        const name = document.getElementById('new-card-name').value.trim();
-        const urls = document.getElementById('new-card-urls').value.trim();
-        if(!name) return alert("请输入标题");
-        const linkList = urls.split('\n').filter(u => u.trim()).map(u => ({ label: "新链接", url: u.trim() }));
-        data.push({ name, links: linkList });
-        localStorage.setItem('my_nav_data', JSON.stringify(data));
-        pushToCloud().then(() => {
-            render();
-            document.getElementById('new-card-name').value = "";
-            document.getElementById('new-card-urls').value = "";
-        });
+    async function saveAndSync() {
+        localStorage.setItem('nav_db', JSON.stringify(db));
+        const tag = document.getElementById('status-tag');
+        tag.innerText = "正在推送...";
+        try {
+            const res = await fetch(`https://api.github.com/gists/${gid}`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `token ${tk}` },
+                body: JSON.stringify({ files: { [FILE_NAME]: { content: JSON.stringify(db) } } })[cite: 1]
+            });
+            if(res.ok) {
+                tag.innerText = "同步成功 ✅";
+                render();
+            } else {
+                const err = await res.json();
+                alert("同步失败：" + err.message + " (请检查Token权限)");
+            }
+        } catch(e) { alert("网络异常"); }
     }
+
+    function addCard() {
+        const name = document.getElementById('nc-name').value;
+        const urls = document.getElementById('nc-urls').value.split('\n').filter(u=>u.trim());
+        db.push({ name, links: urls.map(u => ({ label: "链接", url: u.trim() })) });
+        saveAndSync();
+        document.getElementById('nc-name').value = "";
+        document.getElementById('nc-urls').value = "";
+    }
+
+    function toggleEdit(s) { isEdit = s; document.body.classList.toggle('panel-open', s); render(); }
+
+    window.onload = () => {
+        document.getElementById('t-in').value = tk;
+        document.getElementById('g-in').value = gid;
+        pull();
+        render();
+    };
 </script>
 </body>
 </html>
