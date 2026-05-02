@@ -2,34 +2,42 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聚合导航 - 跨设备云同步版</title>
+    <title>聚合导航 - 布局优化云同步版</title>
     <style>
-        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; }
+        :root { --primary-color: #007bff; --danger-color: #ff4d4f; --success-color: #28a745; --bg-gray: #f4f7f9; --header-height: 60px; }
         body { font-family: "Microsoft YaHei", sans-serif; margin: 0; background: var(--bg-gray); min-height: 100vh; display: flex; flex-direction: column; }
         
-        /* 顶部配置面板 */
-        #config-header { background: #fff; border-bottom: 1px solid #ddd; padding: 10px 40px; display: flex; align-items: center; justify-content: space-between; z-index: 1001; }
-        #config-display { font-size: 13px; color: #666; }
-        #connection-status { margin-left: 10px; font-weight: bold; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+        /* 顶部配置面板优化 - 增加层级和固定高度 */
+        #config-header { 
+            background: #fff; border-bottom: 1px solid #ddd; 
+            padding: 0 40px; height: var(--header-height);
+            display: flex; align-items: center; justify-content: space-between; 
+            position: fixed; top: 0; left: 0; right: 0; z-index: 2000; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        #config-left { display: flex; align-items: center; gap: 15px; }
+        #config-display { font-size: 13px; color: #666; white-space: nowrap; }
+        #connection-status { font-weight: bold; padding: 4px 10px; border-radius: 4px; font-size: 12px; }
         .status-offline { background: #eee; color: #999; }
         .status-online { background: #e6fffa; color: var(--success-color); }
         .status-error { background: #fff1f0; color: var(--danger-color); }
 
         #config-edit-popup { 
-            position: absolute; top: 50px; left: 40px; background: white; border: 1px solid #ddd; 
+            position: absolute; top: 65px; left: 40px; background: white; border: 1px solid #ddd; 
             box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 8px; padding: 20px; 
-            display: none; flex-direction: column; gap: 10px; width: 300px; z-index: 1002;
+            display: none; flex-direction: column; gap: 10px; width: 300px; z-index: 2001;
         }
 
-        #content-wrapper { flex: 1; padding: 40px; box-sizing: border-box; transition: margin-right 0.3s; }
+        /* 内容区域增加顶距，防止被 header 遮挡 */
+        #content-wrapper { flex: 1; padding: calc(var(--header-height) + 30px) 40px 40px 40px; box-sizing: border-box; transition: margin-right 0.3s; }
         #main-grid { display: grid; grid-template-columns: repeat(auto-fill, 340px); gap: 25px; justify-content: center; }
         
+        /* 卡片样式 */
         .blogger-card { 
             width: 340px; background: #fff; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
             border: 1px solid #eee; padding: 20px; position: relative; box-sizing: border-box;
         }
         .edit-mode-active { border: 2px solid var(--primary-color); background: #fafafa; }
-        
         .name-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
         .blogger-name-input { border: none; font-size: 18px; font-weight: bold; color: #222; outline: none; background: transparent; width: 100%; }
         
@@ -48,12 +56,15 @@
         
         .add-item-btn { width: 100%; padding: 8px; margin-top: 5px; border: 1px dashed var(--primary-color); background: #fff; color: var(--primary-color); border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold; }
         
-        #side-admin-panel { position: fixed; top: 0; right: -340px; width: 340px; height: 100%; background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1000; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
+        /* 侧边管理面板 - 顶距调整 */
+        #side-admin-panel { position: fixed; top: var(--header-height); right: -340px; width: 340px; height: calc(100% - var(--header-height)); background: #fff; box-shadow: -5px 0 20px rgba(0,0,0,0.1); transition: right 0.3s ease; z-index: 1500; padding: 30px 20px; box-sizing: border-box; visibility: hidden; }
         body.admin-open #side-admin-panel { right: 0; visibility: visible; }
         body.admin-open #content-wrapper { margin-right: 340px; }
 
         #float-tools { position: fixed; bottom: 30px; right: 30px; z-index: 999; display: flex; gap: 10px; }
-        .btn-trigger { background: #333; color: white; border: none; padding: 12px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; }
+        .btn-trigger { background: #333; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-size: 14px; }
+        .btn-sync { background: var(--success-color); color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        
         .input-style { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
         .btn-action { width: 100%; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         .save-feedback { color: var(--success-color); font-size: 12px; font-weight: bold; opacity: 0; transition: opacity 0.3s; margin-left: 10px; }
@@ -63,19 +74,24 @@
 <body>
 
     <div id="config-header">
-        <div id="config-display">
-            Gist ID：<span id="display-gist-id">未设置</span>
-            <span id="connection-status" class="status-offline">待连接</span>
+        <div id="config-left">
+            <div id="config-display">
+                Gist ID: <span id="display-gist-id" style="font-family: monospace;">未设置</span>
+                <span id="connection-status" class="status-offline">待连接</span>
+            </div>
+            <!-- 新增：强制拉取同步按钮 -->
+            <button class="btn-sync" onclick="testConnection(true)">🔄 同步云端数据</button>
         </div>
-        <button class="btn-trigger" style="padding: 5px 15px; font-size: 12px;" onclick="toggleConfigPopup()">修改 Token/Gist</button>
+        
+        <button class="btn-trigger" style="padding: 6px 15px; font-size: 12px; background: #444;" onclick="toggleConfigPopup()">修改 Token/Gist 配置</button>
         
         <div id="config-edit-popup">
             <label style="font-size: 12px; font-weight: bold;">GitHub Token</label>
             <input type="password" id="input-token" class="input-style" placeholder="ghp_xxx">
             <label style="font-size: 12px; font-weight: bold;">Gist ID</label>
-            <input type="text" id="input-gist" class="input-style" placeholder="粘贴 Gist ID">
-            <button onclick="saveConfig()" style="background:var(--success-color); color:white; border:none; padding:10px; border-radius:6px; cursor:pointer;">统一确认并测试连接</button>
-            <button onclick="toggleConfigPopup()" style="background:none; color:#999; border:none; cursor:pointer; font-size:12px;">关闭</button>
+            <input type="text" id="input-gist" class="input-style" placeholder="粘贴你的 Gist ID">
+            <button onclick="saveConfig()" style="background:var(--success-color); color:white; border:none; padding:10px; border-radius:6px; cursor:pointer; font-weight:bold;">统一确认并测试连接</button>
+            <button onclick="toggleConfigPopup()" style="background:none; color:#999; border:none; cursor:pointer; font-size:12px;">取消关闭</button>
         </div>
     </div>
 
@@ -85,14 +101,15 @@
 
     <div id="side-admin-panel">
         <h2 style="margin-top:0">管理中心</h2>
+        <p style="font-size:12px; color:#888;">在此创建新卡片，数据将同步至云端。</p>
         <input type="text" id="newName" class="input-style" placeholder="输入卡片名称" style="margin-bottom:10px; width:100%;">
-        <textarea id="newUrls" class="input-style" placeholder="批量粘贴网址" style="height:150px; resize:none; margin-bottom:10px; width:100%;"></textarea>
-        <button class="btn-action" style="background:var(--primary-color); color:white;" id="add-btn">创建卡片</button>
-        <button class="btn-action" style="background:#f5f5f5; color:#666;" id="close-admin-btn">退出管理</button>
+        <textarea id="newUrls" class="input-style" placeholder="批量粘贴网址（自动识别）" style="height:150px; resize:none; margin-bottom:10px; width:100%;"></textarea>
+        <button class="btn-action" style="background:var(--primary-color); color:white;" id="add-btn">创建新卡片</button>
+        <button class="btn-action" style="background:#f5f5f5; color:#666;" id="close-admin-btn">退出编辑模式</button>
     </div>
 
     <div id="float-tools">
-        <button class="btn-trigger" id="master-admin-btn">⚙️ 管理中心</button>
+        <button class="btn-trigger" id="master-admin-btn">⚙️ 进入管理中心</button>
     </div>
 
 <script>
@@ -110,7 +127,6 @@
         document.getElementById('input-token').value = GH_TOKEN;
         document.getElementById('input-gist').value = GIST_ID;
 
-        // 核心修复：初始进入时如果已有配置，自动拉取云端[cite: 1]
         if (GH_TOKEN && GIST_ID) testConnection(true);
         render();
     });
@@ -126,7 +142,6 @@
         popup.style.display = (popup.style.display === 'flex') ? 'none' : 'flex';
     }
 
-    // 核心修改：保存配置并强制拉取数据[cite: 1]
     async function saveConfig() {
         GH_TOKEN = document.getElementById('input-token').value.trim();
         GIST_ID = document.getElementById('input-gist').value.trim();
@@ -134,14 +149,16 @@
         localStorage.setItem('nav_gist_id', GIST_ID);
         document.getElementById('display-gist-id').innerText = GIST_ID;
         
-        await testConnection(true); // 连接成功后自动拉取
+        await testConnection(true); 
         setTimeout(toggleConfigPopup, 1000);
     }
 
-    // 核心逻辑：测试连接并可选拉取数据[cite: 1]
     async function testConnection(shouldPull = false) {
         const statusEl = document.getElementById('connection-status');
-        statusEl.innerText = "正在同步云端...";
+        const syncBtn = document.querySelector('.btn-sync');
+        statusEl.innerText = "正在同步...";
+        syncBtn.innerText = "⏳ 同步中...";
+        
         try {
             const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
                 headers: { 'Authorization': `token ${GH_TOKEN}` }
@@ -150,21 +167,21 @@
                 const gistData = await res.json();
                 statusEl.innerText = "已连接云端 ✅";
                 statusEl.className = "status-online";
+                syncBtn.innerText = "🔄 同步云端数据";
                 
-                // 检查是否有存储的文件[cite: 1]
                 if (shouldPull && gistData.files["nav_data.json"]) {
                     const content = gistData.files["nav_data.json"].content;
                     if (content) {
                         bloggers = JSON.parse(content);
                         localStorage.setItem('verticalBloggers', JSON.stringify(bloggers));
                         render();
-                        console.log("云端数据已拉取并更新本地");
                     }
                 }
             } else { throw new Error(); }
         } catch (e) {
             statusEl.innerText = "连接失败 ❌";
             statusEl.className = "status-error";
+            syncBtn.innerText = "🔄 同步失败";
         }
     }
 
@@ -194,7 +211,7 @@
                 ${isAdminMode ? `
                 <button class="add-item-btn" onclick="addNewLinkLine(${i})">+ 新增链接</button>
                 <div style="margin-top:15px; display:flex; align-items:center; gap:5px">
-                    <button onclick="removeBlogger(${i})" style="padding:8px 10px; background:#f5f5f5; border:none; border-radius:6px; cursor:pointer; color:#999; font-size:12px;">删除卡片</button>
+                    <button onclick="removeBlogger(${i})" style="padding:8px 10px; background:#f5f5f5; border:none; border-radius:6px; cursor:pointer; color:#999; font-size:12px;">删除</button>
                     <button onclick="saveChanges(${i})" style="flex:1; background:var(--success-color); color:white; border:none; padding:8px; border-radius:6px; cursor:pointer; font-weight:bold;">保存并同步</button>
                     <span class="save-feedback" id="feedback-${i}">已同步</span>
                 </div>` : ''}
@@ -211,10 +228,7 @@
                     files: { "nav_data.json": { content: JSON.stringify(bloggers) } }
                 })
             });
-            document.getElementById('connection-status').innerText = "已同步云端 ✅";
-        } catch (e) {
-            document.getElementById('connection-status').innerText = "同步失败 ❌";
-        }
+        } catch (e) { console.error("同步失败"); }
     }
 
     function saveChanges(index) {
